@@ -1,14 +1,9 @@
-export const metadata = {
-  title: "Rent Management",
-  description: "Rent Management App"
-};
+import "./globals.css";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>
-        {children}
-      </body>
+    <html>
+      <body className="bg-gray-100">{children}</body>
     </html>
   );
 }
