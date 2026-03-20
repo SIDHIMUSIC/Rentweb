@@ -1,21 +1,53 @@
-
 "use client";
-import {useState} from "react";
 
-export default function TenantForm(){
-  const [f,setF]=useState({name:"",phone:"",roomNumber:""});
-  const submit=async(e)=>{
+import { useState } from "react";
+
+export default function TenantForm() {
+  const [form, setForm] = useState({
+    name: "",
+    phone: "",
+    roomNumber: "",
+    rentAmount: 3000,
+  });
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    await fetch("/api/tenants",{method:"POST",body:JSON.stringify(f)});
-    alert("Added");
-    location.reload();
+
+    const res = await fetch("/api/tenants", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",   // ✅ IMPORTANT FIX
+      },
+      body: JSON.stringify(form),
+    });
+
+    if (res.ok) {
+      alert("Tenant Added");
+      location.reload(); // refresh UI
+    } else {
+      alert("Error adding tenant");
+    }
   };
-  return(
-    <form onSubmit={submit} className="space-y-2">
-      <input className="border p-2 w-full" placeholder="Name" onChange={e=>setF({...f,name:e.target.value})}/>
-      <input className="border p-2 w-full" placeholder="Phone" onChange={e=>setF({...f,phone:e.target.value})}/>
-      <input className="border p-2 w-full" placeholder="Room F1-R1" onChange={e=>setF({...f,roomNumber:e.target.value})}/>
-      <button className="bg-green-500 text-white px-4 py-2">Add</button>
+
+  return (
+    <form onSubmit={handleSubmit} className="flex gap-2 mb-4">
+      <input
+        className="border p-2"
+        placeholder="Name"
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+      />
+      <input
+        className="border p-2"
+        placeholder="Phone"
+        onChange={(e) => setForm({ ...form, phone: e.target.value })}
+      />
+      <input
+        className="border p-2"
+        placeholder="Room (F1-R1)"
+        onChange={(e) => setForm({ ...form, roomNumber: e.target.value })}
+      />
+
+      <button className="bg-blue-500 text-white px-4">Add</button>
     </form>
-  )
+  );
 }
