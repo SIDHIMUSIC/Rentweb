@@ -1,15 +1,25 @@
 import Navbar from "@/components/Navbar";
 import Card from "@/components/Card";
-
-async function getData() {
-  const t = await fetch("/api/tenants", { cache: "no-store" }).then(res => res.json());
-  const r = await fetch("/api/rooms", { cache: "no-store" }).then(res => res.json());
-  const p = await fetch("/api/payments", { cache: "no-store" }).then(res => res.json());
-
-  return { t, r, p };
-}
+import { connectDB } from "@/lib/mongodb";
+import Tenant from "@/models/Tenant";
+import Room from "@/models/Room";
+import Payment from "@/models/Payment";
 
 export const dynamic = "force-dynamic";
+
+async function getData() {
+  await connectDB();
+
+  const t = await Tenant.find();
+  const r = await Room.find();
+  const p = await Payment.find();
+
+  return {
+    t: JSON.parse(JSON.stringify(t)),
+    r: JSON.parse(JSON.stringify(r)),
+    p: JSON.parse(JSON.stringify(p)),
+  };
+}
 
 export default async function Page() {
   const { t, r, p } = await getData();
