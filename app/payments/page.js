@@ -1,12 +1,13 @@
 import Navbar from "@/components/Navbar";
 import PaymentForm from "@/components/PaymentForm";
+import { connectDB } from "@/lib/mongodb";
+import Payment from "@/models/Payment";
 
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const payments = await fetch("/api/payments", { cache: "no-store" }).then(
-    (res) => res.json()
-  );
+  await connectDB();
+  const payments = await Payment.find().populate("tenant");
 
   return (
     <div>
@@ -14,9 +15,9 @@ export default async function Page() {
       <div className="p-4">
         <PaymentForm />
 
-        <ul className="mt-4 space-y-2">
-          {payments.map((p) => (
-            <li key={p._id} className="bg-white p-2 rounded shadow">
+        <ul className="mt-4">
+          {payments.map(p => (
+            <li key={p._id}>
               {p.month} - ₹{p.paidAmount} ({p.status})
             </li>
           ))}
