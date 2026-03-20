@@ -19,10 +19,10 @@ export default async function Page() {
           {rooms.map((room) => (
             <div
               key={room._id}
-              className={`p-4 rounded shadow text-white ${
+              className={`p-4 rounded shadow ${
                 room.status === "occupied"
-                  ? "bg-red-500"
-                  : "bg-green-500"
+                  ? "bg-red-500 text-white"
+                  : "bg-white border"
               }`}
             >
               <h2 className="font-bold">{room.roomNumber}</h2>
