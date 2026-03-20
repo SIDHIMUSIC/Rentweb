@@ -1,19 +1,20 @@
+import { connectDB } from "../../../lib/mongodb";
+import Room from "../../../models/Room";
 
-import {connectDB} from "@/lib/mongodb";
-import Room from "@/models/Room";
-
-export async function GET(){
+export async function GET() {
   await connectDB();
-  let rooms = await Room.find();
-  if(!rooms.length){
-    let arr=[];
-    for(let f=1;f<=3;f++){
-      for(let r=1;r<=10;r++){
-        arr.push({roomNumber:`F${f}-R${r}`});
-      }
-    }
-    await Room.insertMany(arr);
-    rooms = await Room.find();
-  }
-  return Response.json(rooms);
+  return Response.json(await Room.find());
+}
+
+export async function POST(req) {
+  await connectDB();
+  const body = await req.json();
+
+  const room = await Room.findByIdAndUpdate(
+    body.id,
+    body,
+    { new: true }
+  );
+
+  return Response.json(room);
 }
