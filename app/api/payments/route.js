@@ -1,42 +1,52 @@
 import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
 
-export async function GET() {
-  try {
-    await connectDB();
-    const data = await Payment.find().populate("tenant");
-    return Response.json(data);
-  } catch {
-    return Response.json([]);
-  }
-}
-
 export async function POST(req) {
-  try {
-    await connectDB();
+  await connectDB();
 
-    const body = await req.json();
+  const body = await req.json();
 
-    const totalRent = 3000;
-    const remaining = totalRent - body.paidAmount;
+  const totalRent = 3000;
 
-    let status = "unpaid";
-    if (body.paidAmount === 0) status = "unpaid";
-    else if (remaining === 0) status = "paid";
-    else status = "partial";
+  // 🔥 CHECK EXISTING (same tenant + month)
+  let existing = await Payment.findOne({
+    tenant: body.tenant,
+    month: body.month,
+  });
 
-    await Payment.create({
-      tenant: body.tenant,
-      month: body.month,
-      totalRent,
-      paidAmount: body.paidAmount,
-      remainingAmount: remaining,
-      status,
-    });
+  if (existing) {
+    // ✅ ADD TO EXISTING
+    existing.paidAmount += body.paidAmount;
+
+    existing.remainingAmount = totalRent - existing.paidAmount;
+
+    existing.status =
+      existing.remainingAmount === 0
+        ? "paid"
+        : "partial";
+
+    await existing.save();
 
     return Response.json({ success: true });
-  } catch (err) {
-    console.log(err);
-    return Response.json({ success: false });
   }
+
+  // 🆕 NEW ENTRY
+  const remaining = totalRent - body.paidAmount;
+
+  await Payment.create({
+    tenant: body.tenant,
+    month: body.month,
+    totalRent,
+    paidAmount: body.paidAmount,
+    remainingAmount: remaining,
+    status:
+      remaining === 0
+        ? "paid"
+        : body.paidAmount === 0
+        ? "unpaid"
+        : "partial",
+  });
+
+  return Response.json({ success: true });
 }
+
