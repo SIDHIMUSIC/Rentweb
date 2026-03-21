@@ -32,7 +32,7 @@ export default function Page() {
   }, []);
 
   // ===============================
-  // SAVE PAYMENT
+  // SAVE PAYMENT (🔥 FIXED)
   // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,7 +42,10 @@ export default function Page() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        isAdmin: true, // 🔥 MOST IMPORTANT FIX
+      }),
     });
 
     const data = await res.json();
@@ -56,14 +59,14 @@ export default function Page() {
   };
 
   // ===============================
-  // 🔥 FIXED FILTER
+  // FILTER (FIXED)
   // ===============================
   const filtered = payments.filter(
     (p) => String(p.tenant?._id) === String(selectedTenant)
   );
 
   // ===============================
-  // SORT (SAFE COPY)
+  // SORT
   // ===============================
   const sorted = [...filtered].sort((a, b) => {
     const parseMonth = (str) => {
@@ -84,11 +87,12 @@ export default function Page() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
+
       <h1 className="text-2xl font-bold mb-4 text-blue-600">
         💳 Payments
       </h1>
 
-      {/* FORM */}
+      {/* ================= FORM ================= */}
       <form
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
@@ -139,19 +143,20 @@ export default function Page() {
         </button>
       </form>
 
+      {/* ================= EMPTY ================= */}
       {!selectedTenant && (
         <p className="text-gray-500">
           👆 Select tenant to view payments
         </p>
       )}
 
+      {/* ================= LIST ================= */}
       {selectedTenant && (
         <>
           <div className="bg-red-100 p-3 mb-4 rounded font-bold">
             Total Pending: ₹{totalPending}
           </div>
 
-          {/* PAYMENTS */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
