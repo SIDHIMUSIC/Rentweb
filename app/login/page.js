@@ -30,7 +30,6 @@ export default function Login() {
     <div className="flex h-screen justify-center items-center bg-black text-white">
 
       <div className="bg-gray-800 p-6 rounded shadow">
-
         <h2 className="text-xl mb-4">🔐 Admin Login</h2>
 
         <input
@@ -46,7 +45,6 @@ export default function Login() {
         >
           Login
         </button>
-
       </div>
 
     </div>
