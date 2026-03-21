@@ -4,8 +4,8 @@ const TenantSchema = new mongoose.Schema({
   name: String,
   phone: String,
   roomNumber: String,
-  rentAmount: Number,
-  startDate: Date, // 🔥 NEW
+  rentAmount: Number, // 🔥 custom rent
+  startDate: Date,
 });
 
 export default mongoose.models.Tenant ||
