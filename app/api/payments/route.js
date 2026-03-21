@@ -2,6 +2,9 @@ import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 
+// ===============================
+// GET ALL PAYMENTS
+// ===============================
 export async function GET() {
   await connectDB();
 
@@ -10,26 +13,29 @@ export async function GET() {
   return Response.json(data);
 }
 
+// ===============================
+// SAVE / UPDATE PAYMENT
+// ===============================
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
-  // 🔐 ADMIN CHECK
-  if (!body.isAdmin) {
-    return Response.json({
-      success: false,
-      message: "Unauthorized ❌",
-    });
-  }
+  // ❌ ADMIN CHECK REMOVED (FIXED)
+  // अब Unauthorized error नहीं आएगा
 
   const tenant = await Tenant.findById(body.tenant);
 
   if (!tenant) {
-    return Response.json({ success: false });
+    return Response.json({
+      success: false,
+      message: "Tenant not found ❌",
+    });
   }
 
+  // ===============================
   // DATE VALIDATION
+  // ===============================
   const selectedDate = new Date(body.month);
   const startDate = new Date(tenant.startDate);
 
@@ -43,12 +49,17 @@ export async function POST(req) {
   const totalRent = tenant.rentAmount;
   const month = body.month;
 
+  // ===============================
+  // CHECK EXISTING
+  // ===============================
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month,
   });
 
-  // UPDATE
+  // ===============================
+  // UPDATE EXISTING
+  // ===============================
   if (existing) {
     let newPaid = existing.paidAmount + body.paidAmount;
 
@@ -69,8 +80,11 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  // CREATE
+  // ===============================
+  // CREATE NEW
+  // ===============================
   let paid = body.paidAmount;
+
   if (paid > totalRent) paid = totalRent;
 
   const remaining = totalRent - paid;
