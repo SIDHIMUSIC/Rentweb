@@ -21,9 +21,9 @@ export async function POST(req) {
 
   const body = await req.json();
 
-  // ❌ ADMIN CHECK REMOVED (FIXED)
-  // अब Unauthorized error नहीं आएगा
-
+  // ===============================
+  // CHECK TENANT
+  // ===============================
   const tenant = await Tenant.findById(body.tenant);
 
   if (!tenant) {
@@ -34,11 +34,13 @@ export async function POST(req) {
   }
 
   // ===============================
-  // DATE VALIDATION
+  // DATE VALIDATION (🔥 FINAL FIX)
   // ===============================
   const selectedDate = new Date(body.month);
   const startDate = new Date(tenant.startDate);
+  const today = new Date();
 
+  // ❌ before tenant start
   if (selectedDate < startDate) {
     return Response.json({
       success: false,
@@ -46,11 +48,19 @@ export async function POST(req) {
     });
   }
 
+  // ❌ future block
+  if (selectedDate > today) {
+    return Response.json({
+      success: false,
+      message: "Future month not allowed ❌",
+    });
+  }
+
   const totalRent = tenant.rentAmount;
   const month = body.month;
 
   // ===============================
-  // CHECK EXISTING
+  // CHECK EXISTING PAYMENT
   // ===============================
   let existing = await Payment.findOne({
     tenant: body.tenant,
@@ -81,7 +91,7 @@ export async function POST(req) {
   }
 
   // ===============================
-  // CREATE NEW
+  // CREATE NEW PAYMENT
   // ===============================
   let paid = body.paidAmount;
 
