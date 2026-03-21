@@ -4,19 +4,18 @@ import Payment from "../../../../models/Payment";
 export async function GET() {
   await connectDB();
 
-  const payments = await Payment.find();
+  const all = await Payment.find();
+  const map = {};
 
-  const seen = {};
-
-  for (let p of payments) {
+  for (let p of all) {
     const key = p.tenant + "_" + p.month;
 
-    if (seen[key]) {
+    if (map[key]) {
       await Payment.findByIdAndDelete(p._id);
     } else {
-      seen[key] = true;
+      map[key] = true;
     }
   }
 
-  return Response.json({ message: "Duplicates removed ✅" });
+  return Response.json({ message: "Cleaned ✅" });
 }
