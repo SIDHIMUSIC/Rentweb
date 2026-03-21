@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import { connectDB } from "@/lib/mongodb";
 import Room from "@/models/Room";
 import Tenant from "@/models/Tenant";
+import Payment from "@/models/Payment";
 
 export const dynamic = "force-dynamic";
 
@@ -10,18 +11,46 @@ export default async function Page() {
 
   const rooms = await Room.find();
   const tenants = await Tenant.find();
+  const payments = await Payment.find();
 
-  // 🔥 CREATE TENANT MAP (IMPORTANT)
+  // ===============================
+  // 🔥 TENANT MAP (ROOM → TENANT)
+  // ===============================
   const tenantMap = {};
   tenants.forEach((t) => {
     tenantMap[t.roomNumber] = t;
   });
 
-  // GROUP BY FLOOR
+  // ===============================
+  // 🔥 STATS
+  // ===============================
+
+  // 💰 TOTAL INCOME
+  const totalIncome = payments.reduce(
+    (a, p) => a + (p.paidAmount || 0),
+    0
+  );
+
+  // 🔴 TOTAL PENDING
+  const totalPending = payments.reduce(
+    (a, p) => a + (p.remainingAmount || 0),
+    0
+  );
+
+  // 🏠 OCCUPIED ROOMS
+  const occupiedRooms = rooms.filter(
+    (r) => r.status === "occupied"
+  ).length;
+
+  // ===============================
+  // 🔥 GROUP BY FLOOR
+  // ===============================
   const floors = {};
   rooms.forEach((room) => {
     const floor = room.roomNumber.split("-")[0];
+
     if (!floors[floor]) floors[floor] = [];
+
     floors[floor].push(room);
   });
 
@@ -31,10 +60,42 @@ export default async function Page() {
 
       <div className="p-6 bg-gray-100 min-h-screen">
 
+        {/* TITLE */}
         <h1 className="text-2xl font-bold mb-6">
           🏢 Dashboard
         </h1>
 
+        {/* ===============================
+            🔥 STATS CARDS
+        =============================== */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+
+          <div className="bg-green-500 text-white p-4 rounded shadow">
+            <p>Total Income</p>
+            <h2 className="text-xl font-bold">
+              ₹{totalIncome}
+            </h2>
+          </div>
+
+          <div className="bg-red-500 text-white p-4 rounded shadow">
+            <p>Total Pending</p>
+            <h2 className="text-xl font-bold">
+              ₹{totalPending}
+            </h2>
+          </div>
+
+          <div className="bg-blue-500 text-white p-4 rounded shadow">
+            <p>Occupied Rooms</p>
+            <h2 className="text-xl font-bold">
+              {occupiedRooms}
+            </h2>
+          </div>
+
+        </div>
+
+        {/* ===============================
+            ROOMS BY FLOOR
+        =============================== */}
         {Object.keys(floors).map((floor) => (
           <div key={floor} className="mb-8">
 
@@ -65,22 +126,24 @@ export default async function Page() {
                       {room.status}
                     </p>
 
-                    {/* 👤 TENANT NAME */}
+                    {/* 👤 TENANT */}
                     {tenant && (
                       <p className="text-xs text-center font-bold text-yellow-300">
                         {tenant.name}
                       </p>
                     )}
 
-                    {/* 💰 RENT FIX (IMPORTANT) */}
+                    {/* 💰 RENT (FIXED) */}
                     <p className="text-xs text-center font-bold">
                       ₹{tenant ? tenant.rentAmount : room.rent}
                     </p>
+
                   </a>
                 );
               })}
 
             </div>
+
           </div>
         ))}
 
