@@ -1,59 +1,79 @@
-import Navbar from "@/components/Navbar";
-import { connectDB } from "@/lib/mongodb";
-import Tenant from "@/models/Tenant";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useState } from "react";
 
-export default async function Page() {
-  await connectDB();
+export default function Page() {
+  const [tenants, setTenants] = useState([]);
+  const [form, setForm] = useState({
+    tenant: "",
+    month: "",
+    paidAmount: 0,
+    remainingAmount: 0
+  });
 
-  const tenants = await Tenant.find();
+  useEffect(() => {
+    fetch("/api/tenants").then(r => r.json()).then(setTenants);
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    await fetch("/api/payments", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(form)
+    });
+
+    alert("Payment Saved ✅");
+    location.reload();
+  };
 
   return (
-    <div>
-      <Navbar />
+    <div className="p-6">
 
-      <div className="p-6 bg-gray-100 min-h-screen">
-        <h1 className="text-2xl font-bold mb-6">💰 Payments</h1>
+      <h1 className="text-xl font-bold mb-4">Payments</h1>
 
-        {/* FORM */}
-        <div className="bg-white p-4 rounded shadow mb-6 flex gap-4 flex-wrap">
+      <form onSubmit={handleSubmit} className="flex gap-3 flex-wrap">
 
-          {/* TENANT SELECT */}
-          <select className="border p-2 rounded">
-            <option value="">Select Tenant</option>
+        <select
+          className="border p-2"
+          onChange={(e) => setForm({ ...form, tenant: e.target.value })}
+        >
+          <option>Select Tenant</option>
+          {tenants.map(t => (
+            <option key={t._id} value={t._id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
 
-            {tenants.map((t) => (
-              <option key={t._id} value={t._id}>
-                {t.name} ({t.roomNumber})
-              </option>
-            ))}
-          </select>
+        <input
+          placeholder="Month"
+          className="border p-2"
+          onChange={(e) => setForm({ ...form, month: e.target.value })}
+        />
 
-          <input
-            type="text"
-            placeholder="Month"
-            className="border p-2 rounded"
-          />
+        <input
+          placeholder="Paid"
+          type="number"
+          className="border p-2"
+          onChange={(e) => setForm({ ...form, paidAmount: Number(e.target.value) })}
+        />
 
-          <input
-            type="number"
-            placeholder="Paid"
-            className="border p-2 rounded"
-          />
+        <input
+          placeholder="Remaining"
+          type="number"
+          className="border p-2"
+          onChange={(e) => setForm({ ...form, remainingAmount: Number(e.target.value) })}
+        />
 
-          <input
-            type="number"
-            placeholder="Remaining"
-            className="border p-2 rounded"
-          />
+        <button className="bg-blue-500 text-white px-4">
+          Save
+        </button>
 
-          <button className="bg-blue-500 text-white px-4 rounded hover:bg-blue-600">
-            Add Payment
-          </button>
-        </div>
-
-      </div>
+      </form>
     </div>
   );
 }
