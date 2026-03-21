@@ -15,7 +15,7 @@ export default async function Page({ params }) {
     roomNumber: room.roomNumber,
   });
 
-  // 🔥 AUTO MONTH GENERATION (FINAL FIX)
+  // 🔥 AUTO MONTH GENERATION
   if (tenant && tenant.rentAmount) {
     const start = new Date(tenant.startDate);
     const now = new Date();
@@ -28,19 +28,18 @@ export default async function Page({ params }) {
         year: "numeric",
       });
 
-      // 🔥 CHECK EXIST
       const exists = await Payment.findOne({
         tenant: tenant._id,
-        month: month,
+        month,
       });
 
       if (!exists) {
         await Payment.create({
           tenant: tenant._id,
-          month: month,
-          totalRent: tenant.rentAmount,        // ✅ FIXED
+          month,
+          totalRent: tenant.rentAmount, // ✅ FIX
           paidAmount: 0,
-          remainingAmount: tenant.rentAmount,  // ✅ FIXED
+          remainingAmount: tenant.rentAmount, // ✅ FIX
           status: "unpaid",
         });
       }
@@ -54,12 +53,12 @@ export default async function Page({ params }) {
     ? await Payment.find({ tenant: tenant._id })
     : [];
 
-  // 🔥 SORT (IMPORTANT)
+  // 🔥 SORT
   payments = payments.sort(
     (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
   );
 
-  // 🔥 TOTAL
+  // 🔥 TOTAL PENDING
   const totalPending = payments.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
@@ -75,10 +74,19 @@ export default async function Page({ params }) {
           🏠 Room {room.roomNumber}
         </h1>
 
-        {/* ROOM */}
+        {/* ROOM INFO */}
         <div className="bg-white p-4 rounded shadow mb-4">
-          <p>Status: {room.status}</p>
-          <p>Rent: ₹{tenant?.rentAmount || room.rent}</p>
+          <p>
+            Status:{" "}
+            <span className="font-bold">
+              {room.status}
+            </span>
+          </p>
+
+          {/* ✅ RENT FIX */}
+          <p className="text-green-600 font-bold">
+            Rent: ₹{tenant ? tenant.rentAmount : room.rent}
+          </p>
         </div>
 
         {/* TENANT */}
@@ -91,7 +99,8 @@ export default async function Page({ params }) {
             <p>
               📅 {new Date(tenant.startDate).toDateString()}
             </p>
-            <p className="text-green-600 font-bold">
+
+            <p className="text-purple-600 font-bold">
               💰 Rent: ₹{tenant.rentAmount}
             </p>
           </div>
@@ -99,22 +108,27 @@ export default async function Page({ params }) {
 
         {/* PAYMENTS */}
         <div className="bg-black text-white p-4 rounded">
-          <h2 className="text-yellow-400 mb-3">
-            Payments
+          <h2 className="text-yellow-400 mb-3 text-lg">
+            💳 Payments
           </h2>
 
           {payments.map((p) => (
             <div key={p._id} className="border-b py-2">
               <p className="font-bold">{p.month}</p>
+
               <p>Paid: ₹{p.paidAmount}</p>
-              <p>Remaining: ₹{p.remainingAmount}</p>
+
+              <p className="text-red-400">
+                Remaining: ₹{p.remainingAmount}
+              </p>
+
               <p
                 className={
                   p.status === "paid"
                     ? "text-green-400"
                     : p.status === "partial"
                     ? "text-yellow-400"
-                    : "text-red-400"
+                    : "text-red-500"
                 }
               >
                 {p.status}
@@ -122,7 +136,7 @@ export default async function Page({ params }) {
             </div>
           ))}
 
-          <p className="text-red-400 mt-3 font-bold">
+          <p className="text-red-400 mt-3 font-bold text-lg">
             Total Pending: ₹{totalPending}
           </p>
         </div>
