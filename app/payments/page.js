@@ -13,7 +13,7 @@ export default function Page() {
     paidAmount: 0,
   });
 
-  // 🔥 LOAD DATA
+  // LOAD DATA
   const loadData = async () => {
     const t = await fetch("/api/tenants").then(r => r.json());
     const p = await fetch("/api/payments").then(r => r.json());
@@ -26,7 +26,7 @@ export default function Page() {
     loadData();
   }, []);
 
-  // 🔥 SAVE PAYMENT
+  // SAVE PAYMENT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -46,17 +46,24 @@ export default function Page() {
     }
   };
 
-  // 🔥 FILTER BY TENANT
+  // FILTER BY TENANT
   const filtered = payments.filter(
     (p) => p.tenant?._id === selectedTenant
   );
 
-  // 🔥 SORT BY DATE
-  const sorted = filtered.sort(
-    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
-  );
+  // 🔥 FINAL SORT FIX (MONTH BASED)
+  const sorted = filtered.sort((a, b) => {
+    const parseMonth = (str) => {
+      if (!str) return new Date(0);
 
-  // 🔥 TOTAL PENDING
+      const [month, year] = str.split(" ");
+      return new Date(`${month} 1, ${year}`);
+    };
+
+    return parseMonth(a.month) - parseMonth(b.month);
+  });
+
+  // TOTAL PENDING
   const totalPending = sorted.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
@@ -91,7 +98,7 @@ export default function Page() {
           ))}
         </select>
 
-        {/* 🔥 MONTH FIX */}
+        {/* MONTH INPUT */}
         <input
           type="month"
           className="border p-2"
