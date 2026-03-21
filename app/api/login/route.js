@@ -1,10 +1,9 @@
 export async function POST(req) {
   const body = await req.json();
 
-  if (body.password === process.env.ADMIN_PASSWORD) {
+  if (body.password === "12345") {
     return Response.json({
       success: true,
-      isAdmin: true,
     });
   }
 
