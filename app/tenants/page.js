@@ -12,14 +12,23 @@ export default async function Page() {
   return (
     <div>
       <Navbar />
-      <div className="p-4">
+
+      <div className="p-6 bg-gray-100 min-h-screen">
+        <h1 className="text-2xl font-bold mb-4">👥 Tenants</h1>
+
         <TenantForm />
 
-        <ul className="mt-4">
-          {tenants.map(t => (
-            <li key={t._id}>{t.name} - {t.roomNumber}</li>
+        <div className="grid md:grid-cols-3 gap-4 mt-4">
+          {tenants.map((t) => (
+            <div key={t._id} className="bg-white p-3 rounded shadow">
+              <p className="font-semibold">{t.name}</p>
+              <p>{t.phone}</p>
+              <p className="text-sm text-gray-500">
+                {t.roomNumber}
+              </p>
+            </div>
           ))}
-        </ul>
+        </div>
       </div>
     </div>
   );
