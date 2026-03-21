@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import { connectDB } from "@/lib/mongodb";
 import Room from "@/models/Room";
-
+import Tenant from "@/models/Tenant";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
