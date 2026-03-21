@@ -3,7 +3,6 @@ import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 
-// GET
 export async function GET() {
   await connectDB();
 
@@ -11,30 +10,26 @@ export async function GET() {
     .populate("tenant")
     .sort({ createdAt: 1 });
 
-  return Response.json(data || []);
+  return Response.json(data);
 }
 
-// POST
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
   const tenant = await Tenant.findById(body.tenant);
-
   const room = await Room.findOne({
     roomNumber: tenant.roomNumber,
   });
 
   const totalRent = tenant.rentAmount || room?.rent || 3000;
 
-  // 🔥 FIX: SAME FORMAT MONTH
-  const month = body.month; // must be SAME everywhere
+  const month = body.month;
 
-  // 🔥 FIND EXISTING
   let existing = await Payment.findOne({
     tenant: body.tenant,
-    month: month,
+    month,
   });
 
   if (existing) {
@@ -55,7 +50,6 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  // NEW
   let paid = body.paidAmount;
   if (paid > totalRent) paid = totalRent;
 
@@ -63,7 +57,7 @@ export async function POST(req) {
 
   await Payment.create({
     tenant: body.tenant,
-    month: month,
+    month,
     totalRent,
     paidAmount: paid,
     remainingAmount: remaining,
