@@ -6,23 +6,27 @@ export async function POST(req) {
 
   const body = await req.json();
 
+  // 🔥 ADMIN CHECK
+  if (!body.isAdmin) {
+    return Response.json({
+      success: false,
+      message: "Unauthorized ❌",
+    });
+  }
+
   const payment = await Payment.findById(body.id);
 
   if (!payment) {
     return Response.json({
       success: false,
-      message: "Payment not found",
     });
   }
 
-  // 🔥 MARK FULL PAID
   payment.paidAmount = payment.totalRent;
   payment.remainingAmount = 0;
   payment.status = "paid";
 
   await payment.save();
 
-  return Response.json({
-    success: true,
-  });
+  return Response.json({ success: true });
 }
