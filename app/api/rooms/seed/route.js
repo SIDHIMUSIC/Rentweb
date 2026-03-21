@@ -1,10 +1,11 @@
+export const dynamic = "force-dynamic"; // 🔥 ADD THIS
+
 import { connectDB } from "../../../../lib/mongodb";
 import Room from "../../../../models/Room";
 
 export async function GET() {
   await connectDB();
 
-  // delete old
   await Room.deleteMany();
 
   const rooms = [];
