@@ -56,7 +56,7 @@ export default async function Page() {
                   )}
 
                   <p className="text-xs text-center">
-                    ₹{room.rent}
+                    ₹{room.tenantName ? room.rent : room.rent}
                   </p>
                 </a>
               ))}
