@@ -1,23 +1,28 @@
 import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
+import Tenant from "../../../models/Tenant";
+import Room from "../../../models/Room";
 
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
-  const totalRent = 3000;
+  const tenant = await Tenant.findById(body.tenant);
 
-  // 🔥 CHECK EXISTING (same tenant + month)
+  const room = await Room.findOne({
+    roomNumber: tenant.roomNumber,
+  });
+
+  const totalRent = room.rent;
+
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month: body.month,
   });
 
   if (existing) {
-    // ✅ ADD TO EXISTING
     existing.paidAmount += body.paidAmount;
-
     existing.remainingAmount = totalRent - existing.paidAmount;
 
     existing.status =
@@ -30,7 +35,6 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  // 🆕 NEW ENTRY
   const remaining = totalRent - body.paidAmount;
 
   await Payment.create({
@@ -49,4 +53,3 @@ export async function POST(req) {
 
   return Response.json({ success: true });
 }
-
