@@ -139,7 +139,7 @@ export default function Page() {
             Total Pending: ₹{totalPending}
           </div>
 
-          {/* 🔥 PAYMENTS LIST WITH BUTTON */}
+          {/* 🔥 PAYMENTS LIST */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
@@ -162,11 +162,37 @@ export default function Page() {
                     <p>Status: {p.status}</p>
                   </div>
 
-                  {/* RIGHT ✔ BUTTON */}
-                  {p.status !== "paid" && (
+                  {/* RIGHT BUTTONS */}
+                  <div className="flex flex-col gap-2">
+
+                    {/* ✔ PAY */}
+                    {p.status !== "paid" && (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/payments/mark-paid", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ id: p._id }),
+                          });
+
+                          alert("Paid ✅");
+                          loadData();
+                        }}
+                        className="bg-white text-green-600 px-3 py-2 rounded shadow"
+                      >
+                        ✔
+                      </button>
+                    )}
+
+                    {/* ❌ DELETE */}
                     <button
                       onClick={async () => {
-                        await fetch("/api/payments/mark-paid", {
+                        const confirmDelete = confirm("Delete this payment?");
+                        if (!confirmDelete) return;
+
+                        await fetch("/api/payments/delete", {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
@@ -174,14 +200,15 @@ export default function Page() {
                           body: JSON.stringify({ id: p._id }),
                         });
 
-                        alert("Paid ✅");
+                        alert("Deleted 🗑️");
                         loadData();
                       }}
-                      className="bg-white text-green-600 px-3 py-2 rounded shadow hover:scale-105"
+                      className="bg-black text-white px-3 py-2 rounded shadow"
                     >
-                      ✔
+                      ✖
                     </button>
-                  )}
+
+                  </div>
 
                 </div>
               </div>
