@@ -13,30 +13,20 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔥 LOAD TENANTS
+  // LOAD DATA
   const loadData = async () => {
-    try {
-      const res = await fetch("/api/tenants");
-      const data = await res.json();
-
-      setTenants(Array.isArray(data) ? data : []);
-    } catch {
-      setTenants([]);
-    }
+    const res = await fetch("/api/tenants");
+    const data = await res.json();
+    setTenants(Array.isArray(data) ? data : []);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // 🔥 ADD TENANT
+  // ADD TENANT
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!form.name || !form.roomNumber) {
-      alert("Fill all fields ⚠️");
-      return;
-    }
 
     const res = await fetch("/api/tenants", {
       method: "POST",
@@ -49,8 +39,7 @@ export default function Page() {
     const data = await res.json();
 
     if (data.success) {
-      alert("Tenant Added ✅");
-
+      alert("Added ✅");
       setForm({
         name: "",
         phone: "",
@@ -58,14 +47,11 @@ export default function Page() {
         rentAmount: 3000,
         startDate: "",
       });
-
       loadData();
-    } else {
-      alert("Error ❌");
     }
   };
 
-  // 🔥 DELETE TENANT
+  // DELETE
   const deleteTenant = async (id) => {
     const res = await fetch(`/api/tenants/${id}`, {
       method: "DELETE",
@@ -76,8 +62,32 @@ export default function Page() {
     if (data.success) {
       alert("Deleted ✅");
       loadData();
-    } else {
-      alert("Delete failed ❌");
+    }
+  };
+
+  // EDIT (🔥 FULL FIX)
+  const editTenant = async (t) => {
+    const name = prompt("Name", t.name);
+    const phone = prompt("Phone", t.phone);
+    const rent = prompt("Rent", t.rentAmount);
+
+    const res = await fetch(`/api/tenants/${t._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name,
+        phone,
+        rentAmount: Number(rent),
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Updated ✅");
+      loadData();
     }
   };
 
@@ -88,14 +98,14 @@ export default function Page() {
         👥 Tenants
       </h1>
 
-      {/* 🔥 FORM */}
+      {/* FORM */}
       <form
         onSubmit={handleSubmit}
-        className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded-xl shadow-md"
+        className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded shadow"
       >
         <input
           placeholder="Name"
-          className="border p-2 rounded"
+          className="border p-2"
           value={form.name}
           onChange={(e) =>
             setForm({ ...form, name: e.target.value })
@@ -104,7 +114,7 @@ export default function Page() {
 
         <input
           placeholder="Phone"
-          className="border p-2 rounded"
+          className="border p-2"
           value={form.phone}
           onChange={(e) =>
             setForm({ ...form, phone: e.target.value })
@@ -113,61 +123,76 @@ export default function Page() {
 
         <input
           placeholder="Room (F1-R1)"
-          className="border p-2 rounded"
+          className="border p-2"
           value={form.roomNumber}
           onChange={(e) =>
             setForm({ ...form, roomNumber: e.target.value })
           }
         />
 
-        {/* 🔥 START DATE */}
+        {/* 🔥 RENT INPUT */}
+        <input
+          type="number"
+          placeholder="Rent"
+          className="border p-2"
+          value={form.rentAmount}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              rentAmount: Number(e.target.value),
+            })
+          }
+        />
+
+        {/* START DATE */}
         <input
           type="date"
-          className="border p-2 rounded"
+          className="border p-2"
           value={form.startDate}
           onChange={(e) =>
             setForm({ ...form, startDate: e.target.value })
           }
         />
 
-        <button className="bg-blue-500 text-white px-4 rounded hover:bg-blue-600 transition">
+        <button className="bg-blue-500 text-white px-4">
           Add
         </button>
       </form>
 
-      {/* 🔥 LIST */}
-      {tenants.length === 0 && (
-        <p className="text-gray-500">No tenants found</p>
-      )}
-
+      {/* LIST */}
       <div className="grid md:grid-cols-3 gap-4">
         {tenants.map((t) => (
           <div
             key={t._id}
-            className="bg-white p-4 rounded-xl shadow-md hover:shadow-lg transition flex justify-between items-center"
+            className="bg-white p-4 rounded shadow"
           >
-            <div>
-              <p className="font-bold text-lg text-gray-800">
-                {t.name}
-              </p>
+            <p className="font-bold">{t.name}</p>
+            <p>{t.roomNumber}</p>
+            <p className="text-blue-500">
+              ₹{t.rentAmount}
+            </p>
 
-              <p className="text-sm text-gray-500">
-                📍 {t.roomNumber}
+            {t.startDate && (
+              <p className="text-xs text-gray-500">
+                {new Date(t.startDate).toDateString()}
               </p>
+            )}
 
-              {t.startDate && (
-                <p className="text-xs text-blue-500">
-                  📅 {new Date(t.startDate).toDateString()}
-                </p>
-              )}
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => editTenant(t)}
+                className="bg-yellow-500 text-white px-2"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => deleteTenant(t._id)}
+                className="bg-red-500 text-white px-2"
+              >
+                Delete
+              </button>
             </div>
-
-            <button
-              onClick={() => deleteTenant(t._id)}
-              className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
-            >
-              Delete
-            </button>
           </div>
         ))}
       </div>
