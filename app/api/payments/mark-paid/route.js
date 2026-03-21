@@ -6,17 +6,14 @@ export async function POST(req) {
 
   const body = await req.json();
 
-  if (!body.isAdmin) {
-    return Response.json({
-      success: false,
-    });
-  }
+  // ❌ ADMIN CHECK REMOVED (FINAL FIX)
 
   const payment = await Payment.findById(body.id);
 
   if (!payment) {
     return Response.json({
       success: false,
+      message: "Payment not found ❌",
     });
   }
 
