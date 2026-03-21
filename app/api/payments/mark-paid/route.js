@@ -6,11 +6,9 @@ export async function POST(req) {
 
   const body = await req.json();
 
-  // 🔥 ADMIN CHECK
   if (!body.isAdmin) {
     return Response.json({
       success: false,
-      message: "Unauthorized ❌",
     });
   }
 
