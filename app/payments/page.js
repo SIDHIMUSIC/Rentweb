@@ -13,6 +13,7 @@ export default function Page() {
     paidAmount: 0,
   });
 
+  // 🔥 LOAD DATA
   const loadData = async () => {
     const t = await fetch("/api/tenants").then(r => r.json());
     const p = await fetch("/api/payments").then(r => r.json());
@@ -25,6 +26,7 @@ export default function Page() {
     loadData();
   }, []);
 
+  // 🔥 SAVE PAYMENT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -44,16 +46,17 @@ export default function Page() {
     }
   };
 
-  // 🔥 FILTER
+  // 🔥 FILTER BY TENANT
   const filtered = payments.filter(
     (p) => p.tenant?._id === selectedTenant
   );
 
-  // 🔥 SORT
+  // 🔥 SORT BY DATE
   const sorted = filtered.sort(
     (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
   );
 
+  // 🔥 TOTAL PENDING
   const totalPending = sorted.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
@@ -71,6 +74,7 @@ export default function Page() {
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
       >
+        {/* TENANT SELECT */}
         <select
           className="border p-2"
           value={selectedTenant}
@@ -105,9 +109,10 @@ export default function Page() {
           }}
         />
 
+        {/* PAID */}
         <input
           type="number"
-          placeholder="Paid"
+          placeholder="Paid Amount"
           className="border p-2"
           onChange={(e) =>
             setForm({
@@ -122,19 +127,25 @@ export default function Page() {
         </button>
       </form>
 
-      {!selectedTenant && <p>Select tenant first</p>}
+      {!selectedTenant && (
+        <p className="text-gray-500">
+          👆 Select tenant to view payments
+        </p>
+      )}
 
       {selectedTenant && (
         <>
-          <div className="bg-red-100 p-3 mb-4 rounded">
+          {/* TOTAL */}
+          <div className="bg-red-100 p-3 mb-4 rounded font-bold">
             Total Pending: ₹{totalPending}
           </div>
 
+          {/* PAYMENTS LIST */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
                 key={p._id}
-                className={`p-4 rounded text-white ${
+                className={`p-4 rounded text-white shadow ${
                   p.status === "paid"
                     ? "bg-green-500"
                     : p.status === "partial"
@@ -142,10 +153,17 @@ export default function Page() {
                     : "bg-red-500"
                 }`}
               >
-                <p className="font-bold">{p.month}</p>
+                <p className="font-bold text-lg">
+                  {p.month}
+                </p>
+
                 <p>Paid: ₹{p.paidAmount}</p>
+
                 <p>Remaining: ₹{p.remainingAmount}</p>
-                <p>{p.status}</p>
+
+                <p className="font-semibold">
+                  Status: {p.status}
+                </p>
               </div>
             ))}
           </div>
