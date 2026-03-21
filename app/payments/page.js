@@ -5,7 +5,6 @@ export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
 
   const [form, setForm] = useState({
     tenant: "",
@@ -17,17 +16,18 @@ export default function Page() {
   // LOAD DATA
   // ===============================
   const loadData = async () => {
-    const t = await fetch("/api/tenants").then((r) => r.json());
-    const p = await fetch("/api/payments").then((r) => r.json());
+    try {
+      const t = await fetch("/api/tenants").then((r) => r.json());
+      const p = await fetch("/api/payments").then((r) => r.json());
 
-    setTenants(Array.isArray(t) ? t : []);
-    setPayments(Array.isArray(p) ? p : []);
+      setTenants(Array.isArray(t) ? t : []);
+      setPayments(Array.isArray(p) ? p : []);
+    } catch (err) {
+      console.log("Error loading:", err);
+    }
   };
 
   useEffect(() => {
-    const admin = localStorage.getItem("isAdmin");
-    setIsAdmin(admin === "true");
-
     loadData();
   }, []);
 
@@ -42,10 +42,7 @@ export default function Page() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        ...form,
-        isAdmin: true, // 🔥 IMPORTANT
-      }),
+      body: JSON.stringify(form),
     });
 
     const data = await res.json();
@@ -59,14 +56,14 @@ export default function Page() {
   };
 
   // ===============================
-  // 🔥 FIXED FILTER (MAIN BUG)
+  // 🔥 FIXED FILTER
   // ===============================
   const filtered = payments.filter(
     (p) => String(p.tenant?._id) === String(selectedTenant)
   );
 
   // ===============================
-  // SORT
+  // SORT (SAFE COPY)
   // ===============================
   const sorted = [...filtered].sort((a, b) => {
     const parseMonth = (str) => {
@@ -91,9 +88,7 @@ export default function Page() {
         💳 Payments
       </h1>
 
-      {/* ===============================
-          FORM
-      =============================== */}
+      {/* FORM */}
       <form
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
@@ -144,24 +139,19 @@ export default function Page() {
         </button>
       </form>
 
-      {/* ===============================
-          EMPTY
-      =============================== */}
       {!selectedTenant && (
         <p className="text-gray-500">
           👆 Select tenant to view payments
         </p>
       )}
 
-      {/* ===============================
-          LIST
-      =============================== */}
       {selectedTenant && (
         <>
           <div className="bg-red-100 p-3 mb-4 rounded font-bold">
             Total Pending: ₹{totalPending}
           </div>
 
+          {/* PAYMENTS */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
@@ -184,83 +174,27 @@ export default function Page() {
                     <p>Status: {p.status}</p>
                   </div>
 
-                  {/* RIGHT BUTTONS */}
-                  {isAdmin && (
-                    <div className="flex flex-col gap-2">
+                  {/* RIGHT ✔ BUTTON */}
+                  {p.status !== "paid" && (
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/payments/mark-paid", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            id: p._id,
+                            isAdmin: true, // 🔥 FIX
+                          }),
+                        });
 
-                      {/* ✔ PAY */}
-                      {p.status !== "paid" && (
-                        <button
-                          onClick={async () => {
-                            await fetch("/api/payments/mark-paid", {
-                              method: "POST",
-                              headers: {
-                                "Content-Type": "application/json",
-                              },
-                              body: JSON.stringify({
-                                id: p._id,
-                                isAdmin: true,
-                              }),
-                            });
-                            loadData();
-                          }}
-                          className="bg-white text-green-600 px-3 py-2 rounded shadow"
-                        >
-                          ✔
-                        </button>
-                      )}
-
-                      {/* ✏️ EDIT */}
-                      <button
-                        onClick={async () => {
-                          const newAmount = prompt("Enter new amount");
-                          if (!newAmount) return;
-
-                          await fetch("/api/payments", {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              tenant: p.tenant._id,
-                              month: p.month,
-                              paidAmount: Number(newAmount),
-                              isAdmin: true,
-                            }),
-                          });
-
-                          loadData();
-                        }}
-                        className="bg-yellow-400 text-black px-3 py-2 rounded shadow"
-                      >
-                        ✏️
-                      </button>
-
-                      {/* ❌ DELETE */}
-                      <button
-                        onClick={async () => {
-                          const ok = confirm("Delete?");
-                          if (!ok) return;
-
-                          await fetch("/api/payments/delete", {
-                            method: "POST",
-                            headers: {
-                              "Content-Type": "application/json",
-                            },
-                            body: JSON.stringify({
-                              id: p._id,
-                              isAdmin: true,
-                            }),
-                          });
-
-                          loadData();
-                        }}
-                        className="bg-black text-white px-3 py-2 rounded shadow"
-                      >
-                        ✖
-                      </button>
-
-                    </div>
+                        loadData();
+                      }}
+                      className="bg-white text-green-600 px-3 py-2 rounded shadow hover:scale-105"
+                    >
+                      ✔
+                    </button>
                   )}
 
                 </div>
