@@ -6,28 +6,40 @@ export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
 
+  const [selectedTenant, setSelectedTenant] = useState("");
+
   const [form, setForm] = useState({
     tenant: "",
     month: "",
     paidAmount: 0,
   });
 
-  // LOAD DATA
+  // 🔥 LOAD DATA
   const loadData = async () => {
-    const t = await fetch("/api/tenants").then(r => r.json());
-    const p = await fetch("/api/payments").then(r => r.json());
+    try {
+      const t = await fetch("/api/tenants").then((r) => r.json());
+      const p = await fetch("/api/payments").then((r) => r.json());
 
-    setTenants(Array.isArray(t) ? t : []);
-    setPayments(Array.isArray(p) ? p : []);
+      setTenants(Array.isArray(t) ? t : []);
+      setPayments(Array.isArray(p) ? p : []);
+    } catch {
+      setTenants([]);
+      setPayments([]);
+    }
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // SAVE PAYMENT
+  // 🔥 SAVE PAYMENT
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.tenant || !form.month) {
+      alert("Fill all fields ⚠️");
+      return;
+    }
 
     const res = await fetch("/api/payments", {
       method: "POST",
@@ -47,8 +59,13 @@ export default function Page() {
     }
   };
 
-  // TOTAL PENDING
-  const totalPending = payments.reduce(
+  // 🔥 FILTER BY SELECTED TENANT
+  const filteredPayments = payments.filter(
+    (p) => p.tenant?._id === selectedTenant
+  );
+
+  // 🔥 TOTAL PENDING
+  const totalPending = filteredPayments.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
   );
@@ -60,18 +77,20 @@ export default function Page() {
         💳 Payments
       </h1>
 
-      {/* FORM */}
+      {/* 🔥 FORM */}
       <form
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
       >
         <select
           className="border p-2 rounded"
-          onChange={(e) =>
-            setForm({ ...form, tenant: e.target.value })
-          }
+          value={selectedTenant}
+          onChange={(e) => {
+            setSelectedTenant(e.target.value);
+            setForm({ ...form, tenant: e.target.value });
+          }}
         >
-          <option>Select Tenant</option>
+          <option value="">Select Tenant</option>
           {tenants.map((t) => (
             <option key={t._id} value={t._id}>
               {t.name} ({t.roomNumber})
@@ -80,7 +99,7 @@ export default function Page() {
         </select>
 
         <input
-          placeholder="Month"
+          placeholder="Month (Jan, Feb...)"
           className="border p-2 rounded"
           onChange={(e) =>
             setForm({ ...form, month: e.target.value })
@@ -104,40 +123,50 @@ export default function Page() {
         </button>
       </form>
 
-      {/* TOTAL PENDING */}
-      <div className="bg-red-100 p-4 rounded mb-4">
-        <h2 className="font-bold text-red-600">
-          Total Pending: ₹{totalPending}
-        </h2>
-      </div>
+      {/* 🔥 SHOW ONLY AFTER SELECT */}
+      {!selectedTenant && (
+        <p className="text-gray-500">
+          Select a tenant to view payments
+        </p>
+      )}
 
-      {/* HISTORY */}
-      <div className="grid gap-3">
-        {payments.map((p) => (
-          <div
-            key={p._id}
-            className={`p-4 rounded shadow text-white ${
-              p.status === "paid"
-                ? "bg-green-500"
-                : p.status === "partial"
-                ? "bg-yellow-500"
-                : "bg-red-500"
-            }`}
-          >
-            <p className="font-bold text-lg">
-              {p.tenant?.name} ({p.month})
-            </p>
-
-            <p>Paid: ₹{p.paidAmount}</p>
-            <p>Remaining: ₹{p.remainingAmount}</p>
-
-            <p className="font-semibold">
-              Status: {p.status}
-            </p>
+      {selectedTenant && (
+        <>
+          {/* 🔥 TOTAL */}
+          <div className="bg-red-100 p-4 rounded mb-4">
+            <h2 className="font-bold text-red-600">
+              Total Pending: ₹{totalPending}
+            </h2>
           </div>
-        ))}
-      </div>
 
+          {/* 🔥 HISTORY */}
+          <div className="grid gap-3">
+            {filteredPayments.map((p) => (
+              <div
+                key={p._id}
+                className={`p-4 rounded shadow text-white ${
+                  p.status === "paid"
+                    ? "bg-green-500"
+                    : p.status === "partial"
+                    ? "bg-yellow-500"
+                    : "bg-red-500"
+                }`}
+              >
+                <p className="font-bold text-lg">
+                  {p.month.toUpperCase()}
+                </p>
+
+                <p>Paid: ₹{p.paidAmount}</p>
+                <p>Remaining: ₹{p.remainingAmount}</p>
+
+                <p className="font-semibold">
+                  Status: {p.status}
+                </p>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
