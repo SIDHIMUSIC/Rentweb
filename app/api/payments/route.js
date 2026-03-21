@@ -23,7 +23,7 @@ export async function POST(req) {
     roomNumber: tenant.roomNumber,
   });
 
-  const totalRent = tenant.rentAmount || room?.rent || 3000;
+  const totalRent = tenant.rentAmount;
 
   const month = body.month;
 
