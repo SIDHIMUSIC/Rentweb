@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
-
   const [selectedTenant, setSelectedTenant] = useState("");
 
   const [form, setForm] = useState({
@@ -14,32 +13,20 @@ export default function Page() {
     paidAmount: 0,
   });
 
-  // 🔥 LOAD DATA
   const loadData = async () => {
-    try {
-      const t = await fetch("/api/tenants").then((r) => r.json());
-      const p = await fetch("/api/payments").then((r) => r.json());
+    const t = await fetch("/api/tenants").then(r => r.json());
+    const p = await fetch("/api/payments").then(r => r.json());
 
-      setTenants(Array.isArray(t) ? t : []);
-      setPayments(Array.isArray(p) ? p : []);
-    } catch {
-      setTenants([]);
-      setPayments([]);
-    }
+    setTenants(Array.isArray(t) ? t : []);
+    setPayments(Array.isArray(p) ? p : []);
   };
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // 🔥 SAVE PAYMENT
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!form.tenant || !form.month) {
-      alert("Fill all fields ⚠️");
-      return;
-    }
 
     const res = await fetch("/api/payments", {
       method: "POST",
@@ -52,20 +39,22 @@ export default function Page() {
     const data = await res.json();
 
     if (data.success) {
-      alert("Payment Saved ✅");
+      alert("Saved ✅");
       loadData();
-    } else {
-      alert("Error ❌");
     }
   };
 
-  // 🔥 FILTER BY SELECTED TENANT
-  const filteredPayments = payments.filter(
+  // 🔥 FILTER
+  const filtered = payments.filter(
     (p) => p.tenant?._id === selectedTenant
   );
 
-  // 🔥 TOTAL PENDING
-  const totalPending = filteredPayments.reduce(
+  // 🔥 SORT
+  const sorted = filtered.sort(
+    (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+  );
+
+  const totalPending = sorted.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
   );
@@ -77,13 +66,13 @@ export default function Page() {
         💳 Payments
       </h1>
 
-      {/* 🔥 FORM */}
+      {/* FORM */}
       <form
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
       >
         <select
-          className="border p-2 rounded"
+          className="border p-2"
           value={selectedTenant}
           onChange={(e) => {
             setSelectedTenant(e.target.value);
@@ -98,18 +87,28 @@ export default function Page() {
           ))}
         </select>
 
+        {/* 🔥 MONTH FIX */}
         <input
-          placeholder="Month (Jan, Feb...)"
-          className="border p-2 rounded"
-          onChange={(e) =>
-            setForm({ ...form, month: e.target.value })
-          }
+          type="month"
+          className="border p-2"
+          onChange={(e) => {
+            const val = e.target.value;
+
+            const date = new Date(val);
+
+            const month = date.toLocaleString("default", {
+              month: "short",
+              year: "numeric",
+            });
+
+            setForm({ ...form, month });
+          }}
         />
 
         <input
-          placeholder="Paid Amount"
           type="number"
-          className="border p-2 rounded"
+          placeholder="Paid"
+          className="border p-2"
           onChange={(e) =>
             setForm({
               ...form,
@@ -118,33 +117,24 @@ export default function Page() {
           }
         />
 
-        <button className="bg-blue-500 text-white px-4 rounded hover:bg-blue-600">
+        <button className="bg-blue-500 text-white px-4">
           Save
         </button>
       </form>
 
-      {/* 🔥 SHOW ONLY AFTER SELECT */}
-      {!selectedTenant && (
-        <p className="text-gray-500">
-          Select a tenant to view payments
-        </p>
-      )}
+      {!selectedTenant && <p>Select tenant first</p>}
 
       {selectedTenant && (
         <>
-          {/* 🔥 TOTAL */}
-          <div className="bg-red-100 p-4 rounded mb-4">
-            <h2 className="font-bold text-red-600">
-              Total Pending: ₹{totalPending}
-            </h2>
+          <div className="bg-red-100 p-3 mb-4 rounded">
+            Total Pending: ₹{totalPending}
           </div>
 
-          {/* 🔥 HISTORY */}
           <div className="grid gap-3">
-            {filteredPayments.map((p) => (
+            {sorted.map((p) => (
               <div
                 key={p._id}
-                className={`p-4 rounded shadow text-white ${
+                className={`p-4 rounded text-white ${
                   p.status === "paid"
                     ? "bg-green-500"
                     : p.status === "partial"
@@ -152,16 +142,10 @@ export default function Page() {
                     : "bg-red-500"
                 }`}
               >
-                <p className="font-bold text-lg">
-                  {p.month.toUpperCase()}
-                </p>
-
+                <p className="font-bold">{p.month}</p>
                 <p>Paid: ₹{p.paidAmount}</p>
                 <p>Remaining: ₹{p.remainingAmount}</p>
-
-                <p className="font-semibold">
-                  Status: {p.status}
-                </p>
+                <p>{p.status}</p>
               </div>
             ))}
           </div>
