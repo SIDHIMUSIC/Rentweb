@@ -3,41 +3,46 @@ import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 
-// GET
+// ✅ GET ALL PAYMENTS
 export async function GET() {
   await connectDB();
 
   const data = await Payment.find()
     .populate("tenant")
-    .sort({ month: 1 }); // 🔥 SORT FIX
+    .sort({ createdAt: 1 }); // 🔥 correct order
 
-  return Response.json(data);
+  return Response.json(data || []);
 }
 
-// POST
+// ✅ ADD / UPDATE PAYMENT
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
   const tenant = await Tenant.findById(body.tenant);
+
+  if (!tenant) {
+    return Response.json({ success: false });
+  }
+
   const room = await Room.findOne({
     roomNumber: tenant.roomNumber,
   });
 
-  const totalRent = tenant.rentAmount || room.rent;
+  const totalRent = tenant.rentAmount || room?.rent || 3000;
 
-  // 🔥 SAME MONTH CHECK
+  // 🔥 CHECK SAME MONTH
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month: body.month,
   });
 
   if (existing) {
-    // ✅ ADD TO EXISTING
+    // ✅ MERGE PAYMENT
     let newPaid = existing.paidAmount + body.paidAmount;
 
-    // ❌ FIX: NEVER GO NEGATIVE
+    // ❌ prevent overpayment bug
     if (newPaid > totalRent) newPaid = totalRent;
 
     existing.paidAmount = newPaid;
@@ -53,8 +58,9 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  // NEW ENTRY
+  // 🆕 NEW ENTRY
   let paid = body.paidAmount;
+
   if (paid > totalRent) paid = totalRent;
 
   const remaining = totalRent - paid;
@@ -75,5 +81,3 @@ export async function POST(req) {
 
   return Response.json({ success: true });
 }
-
-
