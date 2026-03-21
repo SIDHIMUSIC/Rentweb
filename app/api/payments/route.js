@@ -34,11 +34,44 @@ export async function POST(req) {
   }
 
   // ===============================
-  // DATE VALIDATION (🔥 FINAL FIX)
+  // 🔥 DATE VALIDATION (FINAL FIX)
   // ===============================
-  const selectedDate = new Date(body.month);
+
+  const monthMap = {
+    Jan: 0, Feb: 1, Mar: 2, Apr: 3,
+    May: 4, Jun: 5, Jul: 6, Aug: 7,
+    Sep: 8, Oct: 9, Nov: 10, Dec: 11,
+  };
+
+  if (!body.month) {
+    return Response.json({
+      success: false,
+      message: "Month required ❌",
+    });
+  }
+
+  const parts = body.month.split(" ");
+
+  if (parts.length !== 2) {
+    return Response.json({
+      success: false,
+      message: "Invalid format ❌",
+    });
+  }
+
+  const [mon, year] = parts;
+
+  const selectedDate = new Date(Number(year), monthMap[mon]);
   const startDate = new Date(tenant.startDate);
   const today = new Date();
+
+  // ❌ invalid date
+  if (isNaN(selectedDate.getTime())) {
+    return Response.json({
+      success: false,
+      message: "Invalid date ❌",
+    });
+  }
 
   // ❌ before tenant start
   if (selectedDate < startDate) {
@@ -48,8 +81,12 @@ export async function POST(req) {
     });
   }
 
-  // ❌ future block
-  if (selectedDate > today) {
+  // ❌ FUTURE BLOCK (🔥 MAIN FIX)
+  if (
+    selectedDate.getFullYear() > today.getFullYear() ||
+    (selectedDate.getFullYear() === today.getFullYear() &&
+      selectedDate.getMonth() > today.getMonth())
+  ) {
     return Response.json({
       success: false,
       message: "Future month not allowed ❌",
