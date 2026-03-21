@@ -6,18 +6,15 @@ export async function POST(req) {
 
   const body = await req.json();
 
-  const payment = await Payment.findById(body.id);
-
-  if (!payment) {
+  // 🔥 ADMIN CHECK
+  if (!body.isAdmin) {
     return Response.json({
       success: false,
-      message: "Payment not found",
+      message: "Unauthorized ❌",
     });
   }
 
   await Payment.findByIdAndDelete(body.id);
 
-  return Response.json({
-    success: true,
-  });
+  return Response.json({ success: true });
 }
