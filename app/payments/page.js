@@ -7,73 +7,124 @@ export default function Page() {
   const [form, setForm] = useState({
     tenant: "",
     month: "",
-    paidAmount: 0,
-    remainingAmount: 0
+    paidAmount: "",
+    remainingAmount: "",
   });
 
+  // ✅ LOAD TENANTS
   useEffect(() => {
-    fetch("/api/tenants").then(r => r.json()).then(setTenants);
+    fetch("/api/tenants")
+      .then((r) => r.json())
+      .then((data) => setTenants(data))
+      .catch(() => alert("Error loading tenants"));
   }, []);
 
+  // ✅ SUBMIT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    await fetch("/api/payments", {
+    if (!form.tenant || !form.month) {
+      alert("Fill all fields ⚠️");
+      return;
+    }
+
+    const res = await fetch("/api/payments", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify(form)
+      body: JSON.stringify({
+        ...form,
+        paidAmount: Number(form.paidAmount),
+        remainingAmount: Number(form.remainingAmount),
+      }),
     });
 
-    alert("Payment Saved ✅");
-    location.reload();
+    if (res.ok) {
+      alert("Payment Saved ✅");
+      setForm({
+        tenant: "",
+        month: "",
+        paidAmount: "",
+        remainingAmount: "",
+      });
+    } else {
+      alert("Error saving payment ❌");
+    }
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 bg-gray-100 min-h-screen">
 
-      <h1 className="text-xl font-bold mb-4">Payments</h1>
+      <h1 className="text-2xl font-bold mb-6 text-blue-600">
+        💰 Payments
+      </h1>
 
-      <form onSubmit={handleSubmit} className="flex gap-3 flex-wrap">
+      {/* 🔥 FORM CARD */}
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded-xl shadow-md flex flex-wrap gap-4"
+      >
 
+        {/* TENANT */}
         <select
-          className="border p-2"
-          onChange={(e) => setForm({ ...form, tenant: e.target.value })}
+          value={form.tenant}
+          className="border p-2 rounded w-48"
+          onChange={(e) =>
+            setForm({ ...form, tenant: e.target.value })
+          }
         >
-          <option>Select Tenant</option>
-          {tenants.map(t => (
+          <option value="">Select Tenant</option>
+
+          {tenants.length === 0 && (
+            <option disabled>No tenants found</option>
+          )}
+
+          {tenants.map((t) => (
             <option key={t._id} value={t._id}>
-              {t.name}
+              {t.name} ({t.roomNumber})
             </option>
           ))}
         </select>
 
+        {/* MONTH */}
         <input
-          placeholder="Month"
-          className="border p-2"
-          onChange={(e) => setForm({ ...form, month: e.target.value })}
+          value={form.month}
+          placeholder="Month (e.g. Jan)"
+          className="border p-2 rounded w-40"
+          onChange={(e) =>
+            setForm({ ...form, month: e.target.value })
+          }
         />
 
+        {/* PAID */}
         <input
-          placeholder="Paid"
+          value={form.paidAmount}
+          placeholder="Paid ₹"
           type="number"
-          className="border p-2"
-          onChange={(e) => setForm({ ...form, paidAmount: Number(e.target.value) })}
+          className="border p-2 rounded w-32"
+          onChange={(e) =>
+            setForm({ ...form, paidAmount: e.target.value })
+          }
         />
 
+        {/* REMAINING */}
         <input
-          placeholder="Remaining"
+          value={form.remainingAmount}
+          placeholder="Remaining ₹"
           type="number"
-          className="border p-2"
-          onChange={(e) => setForm({ ...form, remainingAmount: Number(e.target.value) })}
+          className="border p-2 rounded w-32"
+          onChange={(e) =>
+            setForm({ ...form, remainingAmount: e.target.value })
+          }
         />
 
-        <button className="bg-blue-500 text-white px-4">
+        {/* BUTTON */}
+        <button className="bg-blue-500 text-white px-6 rounded hover:bg-blue-600 transition">
           Save
         </button>
-
       </form>
+
     </div>
   );
 }
