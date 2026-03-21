@@ -3,20 +3,28 @@ import Tenant from "../../../../models/Tenant";
 import Room from "../../../../models/Room";
 
 export async function DELETE(req, { params }) {
-  await connectDB();
+  try {
+    await connectDB();
 
-  const tenant = await Tenant.findById(params.id);
+    const tenant = await Tenant.findById(params.id);
 
-  // room vacant again
-  await Room.findOneAndUpdate(
-    { roomNumber: tenant.roomNumber },
-    {
-      status: "vacant",
-      tenantName: ""
+    if (!tenant) {
+      return Response.json({ error: "Not found" }, { status: 404 });
     }
-  );
 
-  await Tenant.findByIdAndDelete(params.id);
+    // ✅ ROOM VACANT
+    await Room.findOneAndUpdate(
+      { roomNumber: tenant.roomNumber },
+      {
+        status: "vacant",
+        tenantName: ""
+      }
+    );
 
-  return Response.json({ message: "Deleted" });
+    await Tenant.findByIdAndDelete(params.id);
+
+    return Response.json({ success: true });
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
 }
