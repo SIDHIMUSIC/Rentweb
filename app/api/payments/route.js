@@ -19,22 +19,41 @@ export async function POST(req) {
   const body = await req.json();
 
   const tenant = await Tenant.findById(body.tenant);
-  const room = await Room.findOne({
-    roomNumber: tenant.roomNumber,
-  });
+
+  if (!tenant) {
+    return Response.json({
+      success: false,
+      message: "Tenant not found",
+    });
+  }
+
+  // 🔥 IMPORTANT: DATE VALIDATION (FIX YOUR BUG)
+  const selectedDate = new Date(body.month);
+  const startDate = new Date(tenant.startDate);
+
+  if (selectedDate < startDate) {
+    return Response.json({
+      success: false,
+      message: "❌ Cannot add payment before tenant start date",
+    });
+  }
 
   const totalRent = tenant.rentAmount;
-
   const month = body.month;
 
+  // 🔥 CHECK EXISTING (NO DUPLICATE)
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month,
   });
 
+  // ===============================
+  // ✅ UPDATE EXISTING PAYMENT
+  // ===============================
   if (existing) {
     let newPaid = existing.paidAmount + body.paidAmount;
 
+    // 🔥 LIMIT FIX
     if (newPaid > totalRent) newPaid = totalRent;
 
     existing.paidAmount = newPaid;
@@ -43,14 +62,23 @@ export async function POST(req) {
     existing.status =
       existing.remainingAmount === 0
         ? "paid"
+        : existing.paidAmount === 0
+        ? "unpaid"
         : "partial";
 
     await existing.save();
 
-    return Response.json({ success: true });
+    return Response.json({
+      success: true,
+      updated: true,
+    });
   }
 
+  // ===============================
+  // ✅ CREATE NEW PAYMENT
+  // ===============================
   let paid = body.paidAmount;
+
   if (paid > totalRent) paid = totalRent;
 
   const remaining = totalRent - paid;
@@ -69,5 +97,8 @@ export async function POST(req) {
         : "partial",
   });
 
-  return Response.json({ success: true });
+  return Response.json({
+    success: true,
+    created: true,
+  });
 }
