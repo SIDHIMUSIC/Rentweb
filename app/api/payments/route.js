@@ -3,6 +3,16 @@ import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 
+// ✅ GET (WITH TENANT POPULATE)
+export async function GET() {
+  await connectDB();
+
+  const data = await Payment.find().populate("tenant");
+
+  return Response.json(data || []);
+}
+
+// ✅ POST (SAME MONTH UPDATE + ROOM RENT)
 export async function POST(req) {
   await connectDB();
 
@@ -14,7 +24,7 @@ export async function POST(req) {
     roomNumber: tenant.roomNumber,
   });
 
-  const totalRent = room.rent;
+  const totalRent = tenant.rentAmount || room.rent;
 
   let existing = await Payment.findOne({
     tenant: body.tenant,
@@ -26,7 +36,7 @@ export async function POST(req) {
     existing.remainingAmount = totalRent - existing.paidAmount;
 
     existing.status =
-      existing.remainingAmount === 0
+      existing.remainingAmount <= 0
         ? "paid"
         : "partial";
 
