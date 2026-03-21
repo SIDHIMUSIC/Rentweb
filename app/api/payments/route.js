@@ -1,22 +1,21 @@
 import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
-import Room from "../../../models/Room";
-
-export async function GET() {
-  await connectDB();
-
-  const data = await Payment.find()
-    .populate("tenant")
-    .sort({ createdAt: 1 });
-
-  return Response.json(data);
-}
 
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
+
+  // 🔥 ADMIN CHECK
+  const isAdmin = body.isAdmin;
+
+  if (!isAdmin) {
+    return Response.json({
+      success: false,
+      message: "Unauthorized ❌",
+    });
+  }
 
   const tenant = await Tenant.findById(body.tenant);
 
@@ -27,33 +26,29 @@ export async function POST(req) {
     });
   }
 
-  // 🔥 IMPORTANT: DATE VALIDATION (FIX YOUR BUG)
+  // 🔥 DATE VALIDATION
   const selectedDate = new Date(body.month);
   const startDate = new Date(tenant.startDate);
 
   if (selectedDate < startDate) {
     return Response.json({
       success: false,
-      message: "❌ Cannot add payment before tenant start date",
+      message: "Invalid month ❌",
     });
   }
 
   const totalRent = tenant.rentAmount;
   const month = body.month;
 
-  // 🔥 CHECK EXISTING (NO DUPLICATE)
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month,
   });
 
-  // ===============================
-  // ✅ UPDATE EXISTING PAYMENT
-  // ===============================
+  // ✅ UPDATE
   if (existing) {
     let newPaid = existing.paidAmount + body.paidAmount;
 
-    // 🔥 LIMIT FIX
     if (newPaid > totalRent) newPaid = totalRent;
 
     existing.paidAmount = newPaid;
@@ -68,17 +63,11 @@ export async function POST(req) {
 
     await existing.save();
 
-    return Response.json({
-      success: true,
-      updated: true,
-    });
+    return Response.json({ success: true });
   }
 
-  // ===============================
-  // ✅ CREATE NEW PAYMENT
-  // ===============================
+  // ✅ CREATE
   let paid = body.paidAmount;
-
   if (paid > totalRent) paid = totalRent;
 
   const remaining = totalRent - paid;
@@ -97,8 +86,5 @@ export async function POST(req) {
         : "partial",
   });
 
-  return Response.json({
-    success: true,
-    created: true,
-  });
+  return Response.json({ success: true });
 }
