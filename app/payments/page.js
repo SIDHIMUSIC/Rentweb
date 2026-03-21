@@ -139,7 +139,7 @@ export default function Page() {
             Total Pending: ₹{totalPending}
           </div>
 
-          {/* 🔥 PAYMENTS LIST */}
+          {/* PAYMENTS LIST */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
@@ -185,6 +185,33 @@ export default function Page() {
                         ✔
                       </button>
                     )}
+
+                    {/* ✏️ EDIT */}
+                    <button
+                      onClick={async () => {
+                        const newAmount = prompt("Enter new paid amount");
+
+                        if (!newAmount) return;
+
+                        await fetch("/api/payments", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({
+                            tenant: p.tenant._id,
+                            month: p.month,
+                            paidAmount: Number(newAmount),
+                          }),
+                        });
+
+                        alert("Updated ✏️");
+                        loadData();
+                      }}
+                      className="bg-yellow-400 text-black px-3 py-2 rounded shadow"
+                    >
+                      ✏️
+                    </button>
 
                     {/* ❌ DELETE */}
                     <button
