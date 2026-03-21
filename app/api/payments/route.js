@@ -3,40 +3,48 @@ import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 
-// ✅ GET (WITH TENANT POPULATE)
+// GET
 export async function GET() {
   await connectDB();
 
-  const data = await Payment.find().populate("tenant");
+  const data = await Payment.find()
+    .populate("tenant")
+    .sort({ month: 1 }); // 🔥 SORT FIX
 
-  return Response.json(data || []);
+  return Response.json(data);
 }
 
-// ✅ POST (SAME MONTH UPDATE + ROOM RENT)
+// POST
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
   const tenant = await Tenant.findById(body.tenant);
-
   const room = await Room.findOne({
     roomNumber: tenant.roomNumber,
   });
 
   const totalRent = tenant.rentAmount || room.rent;
 
+  // 🔥 SAME MONTH CHECK
   let existing = await Payment.findOne({
     tenant: body.tenant,
     month: body.month,
   });
 
   if (existing) {
-    existing.paidAmount += body.paidAmount;
-    existing.remainingAmount = totalRent - existing.paidAmount;
+    // ✅ ADD TO EXISTING
+    let newPaid = existing.paidAmount + body.paidAmount;
+
+    // ❌ FIX: NEVER GO NEGATIVE
+    if (newPaid > totalRent) newPaid = totalRent;
+
+    existing.paidAmount = newPaid;
+    existing.remainingAmount = totalRent - newPaid;
 
     existing.status =
-      existing.remainingAmount <= 0
+      existing.remainingAmount === 0
         ? "paid"
         : "partial";
 
@@ -45,21 +53,27 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  const remaining = totalRent - body.paidAmount;
+  // NEW ENTRY
+  let paid = body.paidAmount;
+  if (paid > totalRent) paid = totalRent;
+
+  const remaining = totalRent - paid;
 
   await Payment.create({
     tenant: body.tenant,
     month: body.month,
     totalRent,
-    paidAmount: body.paidAmount,
+    paidAmount: paid,
     remainingAmount: remaining,
     status:
       remaining === 0
         ? "paid"
-        : body.paidAmount === 0
+        : paid === 0
         ? "unpaid"
         : "partial",
   });
 
   return Response.json({ success: true });
 }
+
+
