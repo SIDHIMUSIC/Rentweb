@@ -2,15 +2,21 @@ import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
 
+export async function GET() {
+  await connectDB();
+
+  const data = await Payment.find().populate("tenant");
+
+  return Response.json(data);
+}
+
 export async function POST(req) {
   await connectDB();
 
   const body = await req.json();
 
-  // 🔥 ADMIN CHECK
-  const isAdmin = body.isAdmin;
-
-  if (!isAdmin) {
+  // 🔐 ADMIN CHECK
+  if (!body.isAdmin) {
     return Response.json({
       success: false,
       message: "Unauthorized ❌",
@@ -20,13 +26,10 @@ export async function POST(req) {
   const tenant = await Tenant.findById(body.tenant);
 
   if (!tenant) {
-    return Response.json({
-      success: false,
-      message: "Tenant not found",
-    });
+    return Response.json({ success: false });
   }
 
-  // 🔥 DATE VALIDATION
+  // DATE VALIDATION
   const selectedDate = new Date(body.month);
   const startDate = new Date(tenant.startDate);
 
@@ -45,7 +48,7 @@ export async function POST(req) {
     month,
   });
 
-  // ✅ UPDATE
+  // UPDATE
   if (existing) {
     let newPaid = existing.paidAmount + body.paidAmount;
 
@@ -66,7 +69,7 @@ export async function POST(req) {
     return Response.json({ success: true });
   }
 
-  // ✅ CREATE
+  // CREATE
   let paid = body.paidAmount;
   if (paid > totalRent) paid = totalRent;
 
