@@ -9,15 +9,15 @@ export async function DELETE(req, { params }) {
     const tenant = await Tenant.findById(params.id);
 
     if (!tenant) {
-      return Response.json({ error: "Not found" }, { status: 404 });
+      return Response.json({ success: false });
     }
 
-    // ✅ ROOM VACANT
+    // 🔥 ROOM VACANT
     await Room.findOneAndUpdate(
       { roomNumber: tenant.roomNumber },
       {
         status: "vacant",
-        tenantName: ""
+        tenantName: "",
       }
     );
 
@@ -25,6 +25,7 @@ export async function DELETE(req, { params }) {
 
     return Response.json({ success: true });
   } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
+    console.log(err);
+    return Response.json({ success: false });
   }
 }
