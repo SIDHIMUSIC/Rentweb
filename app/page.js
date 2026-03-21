@@ -13,18 +13,12 @@ export default async function Page() {
   const tenants = await Tenant.find();
   const payments = await Payment.find();
 
-  // ===============================
-  // 🔥 TENANT MAP
-  // ===============================
   const tenantMap = {};
   tenants.forEach((t) => {
     tenantMap[t.roomNumber] = t;
   });
 
-  // ===============================
-  // 🔥 STATS
-  // ===============================
-
+  // STATS
   const totalIncome = payments.reduce(
     (a, p) => a + (p.paidAmount || 0),
     0
@@ -39,12 +33,8 @@ export default async function Page() {
     (r) => r.status === "occupied"
   ).length;
 
-  // ===============================
-  // 🔥 CURRENT MONTH LOGIC (MAIN STEP 3)
-  // ===============================
-
+  // CURRENT MONTH
   const now = new Date();
-
   const currentMonth = now.toLocaleString("default", {
     month: "short",
     year: "numeric",
@@ -64,15 +54,11 @@ export default async function Page() {
     0
   );
 
-  // ===============================
-  // 🔥 GROUP BY FLOOR
-  // ===============================
+  // GROUP
   const floors = {};
   rooms.forEach((room) => {
     const floor = room.roomNumber.split("-")[0];
-
     if (!floors[floor]) floors[floor] = [];
-
     floors[floor].push(room);
   });
 
@@ -80,61 +66,58 @@ export default async function Page() {
     <div>
       <Navbar />
 
-      <div className="p-6 bg-gray-100 min-h-screen">
+      <div className="p-6 min-h-screen bg-gradient-to-br from-gray-900 to-black text-white">
 
-        <h1 className="text-2xl font-bold mb-6">
-          🏢 Dashboard
+        {/* TITLE */}
+        <h1 className="text-3xl font-bold mb-6 text-center text-yellow-400 drop-shadow-lg">
+          🏢 Smart Rent Dashboard
         </h1>
 
-        {/* ===============================
-            🔥 STATS CARDS
-        =============================== */}
+        {/* 🔥 STATS */}
         <div className="grid grid-cols-3 gap-4 mb-6">
 
-          <div className="bg-green-500 text-white p-4 rounded shadow">
-            <p>Total Income</p>
-            <h2 className="text-xl font-bold">
+          <div className="bg-green-500/20 border border-green-400 p-4 rounded-xl shadow hover:scale-105 transition">
+            <p className="text-green-300">Total Income</p>
+            <h2 className="text-2xl font-bold text-green-400">
               ₹{totalIncome}
             </h2>
           </div>
 
-          <div className="bg-red-500 text-white p-4 rounded shadow">
-            <p>Total Pending</p>
-            <h2 className="text-xl font-bold">
+          <div className="bg-red-500/20 border border-red-400 p-4 rounded-xl shadow hover:scale-105 transition">
+            <p className="text-red-300">Pending</p>
+            <h2 className="text-2xl font-bold text-red-400">
               ₹{totalPending}
             </h2>
           </div>
 
-          <div className="bg-blue-500 text-white p-4 rounded shadow">
-            <p>Occupied Rooms</p>
-            <h2 className="text-xl font-bold">
+          <div className="bg-blue-500/20 border border-blue-400 p-4 rounded-xl shadow hover:scale-105 transition">
+            <p className="text-blue-300">Occupied</p>
+            <h2 className="text-2xl font-bold text-blue-400">
               {occupiedRooms}
             </h2>
           </div>
 
         </div>
 
-        {/* ===============================
-            🔥 CURRENT MONTH SUMMARY
-        =============================== */}
-        <div className="bg-white p-4 rounded shadow mb-6">
+        {/* 🔥 CURRENT MONTH */}
+        <div className="bg-gray-800 p-4 rounded-xl shadow mb-6 border border-purple-500">
 
-          <h2 className="text-lg font-bold mb-3 text-purple-600">
-            📅 {currentMonth} Summary
+          <h2 className="text-lg font-bold mb-3 text-purple-400">
+            📅 {currentMonth}
           </h2>
 
           <div className="flex gap-6">
 
-            <div className="bg-green-100 p-3 rounded">
+            <div className="bg-green-900/40 p-3 rounded-lg">
               <p>Paid</p>
-              <h3 className="text-green-600 font-bold text-lg">
+              <h3 className="text-green-400 text-xl font-bold">
                 ₹{currentPaid}
               </h3>
             </div>
 
-            <div className="bg-red-100 p-3 rounded">
+            <div className="bg-red-900/40 p-3 rounded-lg">
               <p>Pending</p>
-              <h3 className="text-red-600 font-bold text-lg">
+              <h3 className="text-red-400 text-xl font-bold">
                 ₹{currentPending}
               </h3>
             </div>
@@ -143,13 +126,11 @@ export default async function Page() {
 
         </div>
 
-        {/* ===============================
-            ROOMS
-        =============================== */}
+        {/* ROOMS */}
         {Object.keys(floors).map((floor) => (
           <div key={floor} className="mb-8">
 
-            <h2 className="text-lg font-semibold mb-3 text-blue-600">
+            <h2 className="text-lg font-semibold mb-3 text-blue-400">
               {floor} Floor
             </h2>
 
@@ -162,10 +143,10 @@ export default async function Page() {
                   <a
                     key={room._id}
                     href={`/room/${room._id}`}
-                    className={`w-32 h-32 p-3 rounded-xl shadow-md flex flex-col justify-between transition hover:scale-105 ${
+                    className={`w-32 h-32 p-3 rounded-xl flex flex-col justify-between transition transform hover:scale-110 shadow-lg ${
                       room.status === "occupied"
-                        ? "bg-red-500 text-white"
-                        : "bg-green-200"
+                        ? "bg-gradient-to-br from-red-600 to-red-800"
+                        : "bg-gradient-to-br from-green-400 to-green-600 text-black"
                     }`}
                   >
                     <h3 className="text-center font-bold">
