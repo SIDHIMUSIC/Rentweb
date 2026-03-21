@@ -3,24 +3,19 @@ import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 
 export async function POST(req) {
-  try {
-    await connectDB();
+  await connectDB();
+  const body = await req.json();
 
-    const body = await req.json();
+  const tenant = await Tenant.create(body);
 
-    const tenant = await Tenant.create(body);
+  // 🔥 ROOM AUTO UPDATE
+  await Room.findOneAndUpdate(
+    { roomNumber: body.roomNumber },
+    {
+      status: "occupied",
+      tenantName: body.name
+    }
+  );
 
-    // ✅ update room with tenant
-    await Room.findOneAndUpdate(
-      { roomNumber: body.roomNumber },
-      {
-        status: "occupied",
-        tenantName: body.name,
-      }
-    );
-
-    return Response.json(tenant);
-  } catch (err) {
-    return Response.json({ error: err.message }, { status: 500 });
-  }
+  return Response.json(tenant);
 }
