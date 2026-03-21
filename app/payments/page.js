@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useState } from "react";
 
 export default function Page() {
@@ -46,24 +45,22 @@ export default function Page() {
     }
   };
 
-  // FILTER BY TENANT
+  // FILTER
   const filtered = payments.filter(
     (p) => p.tenant?._id === selectedTenant
   );
 
-  // 🔥 FINAL SORT FIX (MONTH BASED)
+  // SORT
   const sorted = filtered.sort((a, b) => {
     const parseMonth = (str) => {
       if (!str) return new Date(0);
-
       const [month, year] = str.split(" ");
       return new Date(`${month} 1, ${year}`);
     };
-
     return parseMonth(a.month) - parseMonth(b.month);
   });
 
-  // TOTAL PENDING
+  // TOTAL
   const totalPending = sorted.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
@@ -81,7 +78,6 @@ export default function Page() {
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
       >
-        {/* TENANT SELECT */}
         <select
           className="border p-2"
           value={selectedTenant}
@@ -98,13 +94,11 @@ export default function Page() {
           ))}
         </select>
 
-        {/* MONTH INPUT */}
         <input
           type="month"
           className="border p-2"
           onChange={(e) => {
             const val = e.target.value;
-
             const date = new Date(val);
 
             const month = date.toLocaleString("default", {
@@ -116,7 +110,6 @@ export default function Page() {
           }}
         />
 
-        {/* PAID */}
         <input
           type="number"
           placeholder="Paid Amount"
@@ -142,12 +135,11 @@ export default function Page() {
 
       {selectedTenant && (
         <>
-          {/* TOTAL */}
           <div className="bg-red-100 p-3 mb-4 rounded font-bold">
             Total Pending: ₹{totalPending}
           </div>
 
-          {/* PAYMENTS LIST */}
+          {/* 🔥 PAYMENTS LIST WITH BUTTON */}
           <div className="grid gap-3">
             {sorted.map((p) => (
               <div
@@ -160,17 +152,38 @@ export default function Page() {
                     : "bg-red-500"
                 }`}
               >
-                <p className="font-bold text-lg">
-                  {p.month}
-                </p>
+                <div className="flex justify-between items-center">
 
-                <p>Paid: ₹{p.paidAmount}</p>
+                  {/* LEFT */}
+                  <div>
+                    <p className="font-bold text-lg">{p.month}</p>
+                    <p>Paid: ₹{p.paidAmount}</p>
+                    <p>Remaining: ₹{p.remainingAmount}</p>
+                    <p>Status: {p.status}</p>
+                  </div>
 
-                <p>Remaining: ₹{p.remainingAmount}</p>
+                  {/* RIGHT ✔ BUTTON */}
+                  {p.status !== "paid" && (
+                    <button
+                      onClick={async () => {
+                        await fetch("/api/payments/mark-paid", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({ id: p._id }),
+                        });
 
-                <p className="font-semibold">
-                  Status: {p.status}
-                </p>
+                        alert("Paid ✅");
+                        loadData();
+                      }}
+                      className="bg-white text-green-600 px-3 py-2 rounded shadow hover:scale-105"
+                    >
+                      ✔
+                    </button>
+                  )}
+
+                </div>
               </div>
             ))}
           </div>
