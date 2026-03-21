@@ -8,11 +8,9 @@ export default async function Page() {
   await connectDB();
   const rooms = await Room.find();
 
-  // group by floor
   const floors = {};
-
   rooms.forEach((room) => {
-    const floor = room.roomNumber.split("-")[0]; // F1
+    const floor = room.roomNumber.split("-")[0];
     if (!floors[floor]) floors[floor] = [];
     floors[floor].push(room);
   });
@@ -27,44 +25,40 @@ export default async function Page() {
         {Object.keys(floors).map((floor) => (
           <div key={floor} className="mb-8">
 
-            {/* FLOOR TITLE */}
-            <h2 className="text-xl font-semibold mb-3 text-blue-600">
+            <h2 className="text-lg font-semibold mb-3 text-blue-600">
               {floor} Floor
             </h2>
 
-            {/* ROOMS ROW GRID */}
             <div className="flex flex-wrap gap-4">
               {floors[floor].map((room) => (
-                <div
+                <a
                   key={room._id}
-                  className={`w-32 h-32 p-3 rounded-xl shadow-md flex flex-col justify-between ${
+                  href={`/room/${room._id}`}   // 🔥 CLICK → DETAILS PAGE
+                  className={`w-32 h-32 p-3 rounded-xl shadow-md flex flex-col justify-between transition hover:scale-105 ${
                     room.status === "occupied"
                       ? "bg-red-500 text-white"
-                      : "bg-green-200 text-black"
+                      : "bg-green-200"
                   }`}
                 >
-                  {/* ROOM NUMBER */}
-                  <h3 className="font-bold text-center">
+                  <h3 className="text-center font-bold">
                     {room.roomNumber}
                   </h3>
 
-                  {/* STATUS */}
                   <p className="text-xs text-center">
                     {room.status}
                   </p>
 
-                  {/* TENANT */}
+                  {/* 🔥 NEON TENANT NAME */}
                   {room.tenantName && (
-                    <p className="text-xs text-center">
+                    <p className="text-xs text-center font-bold text-yellow-300 drop-shadow-[0_0_6px_#fde047]">
                       👤 {room.tenantName}
                     </p>
                   )}
 
-                  {/* RENT */}
                   <p className="text-xs text-center">
                     ₹{room.rent}
                   </p>
-                </div>
+                </a>
               ))}
             </div>
           </div>
