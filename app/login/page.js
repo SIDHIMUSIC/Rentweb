@@ -20,8 +20,10 @@ export default function Login() {
 
     if (data.success) {
       localStorage.setItem("token", data.token);
+
       alert("Login success ✅");
-      window.location.href = "/";
+
+      window.location.href = "/payments"; // 🔥 FIXED
     } else {
       alert("Wrong login ❌");
     }
