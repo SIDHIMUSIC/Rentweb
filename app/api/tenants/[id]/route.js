@@ -3,7 +3,7 @@ import Tenant from "../../../../models/Tenant";
 import Room from "../../../../models/Room";
 import jwt from "jsonwebtoken";
 
-// DELETE
+// ✅ DELETE
 export async function DELETE(req, { params }) {
   await connectDB();
 
@@ -24,7 +24,7 @@ export async function DELETE(req, { params }) {
   return Response.json({ success: true });
 }
 
-// PUT (🔥 FINAL WORKING EDIT)
+// ✅ PUT (🔥 FINAL FIXED)
 export async function PUT(req, { params }) {
   try {
     await connectDB();
@@ -49,7 +49,7 @@ export async function PUT(req, { params }) {
       return Response.json({ success: false, message: "Not found ❌" });
     }
 
-    // 🔥 ROOM CHANGE
+    // 🔥 ROOM CHANGE LOGIC
     if (oldTenant.roomNumber !== body.roomNumber) {
       const newRoom = await Room.findOne({
         roomNumber: body.roomNumber,
@@ -62,7 +62,7 @@ export async function PUT(req, { params }) {
         });
       }
 
-      // OLD ROOM VACANT
+      // OLD ROOM → VACANT
       await Room.findOneAndUpdate(
         { roomNumber: oldTenant.roomNumber },
         {
@@ -71,7 +71,7 @@ export async function PUT(req, { params }) {
         }
       );
 
-      // NEW ROOM OCCUPIED
+      // NEW ROOM → OCCUPIED
       await Room.findOneAndUpdate(
         { roomNumber: body.roomNumber },
         {
@@ -81,13 +81,21 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // UPDATE TENANT
-    await Tenant.findByIdAndUpdate(params.id, body);
+    // ✅ 🔥 MAIN FIX HERE
+    const updatedTenant = await Tenant.findByIdAndUpdate(
+      params.id,
+      body,
+      { new: true } // 🔥 VERY IMPORTANT
+    );
 
-    return Response.json({ success: true });
+    return Response.json({
+      success: true,
+      data: updatedTenant, // 🔥 return updated data
+    });
 
   } catch (err) {
     console.log("PUT ERROR:", err);
+
     return Response.json({
       success: false,
       message: "Server error ❌",
