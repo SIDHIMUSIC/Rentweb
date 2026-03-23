@@ -23,7 +23,7 @@ export default function Page() {
       setTenants(Array.isArray(t) ? t : []);
       setPayments(Array.isArray(p) ? p : []);
     } catch (err) {
-      console.log("Error loading:", err);
+      console.log(err);
     }
   };
 
@@ -32,20 +32,22 @@ export default function Page() {
   }, []);
 
   // ===============================
-  // SAVE PAYMENT (🔥 FIXED)
+  // SAVE PAYMENT (NO ADMIN 🔥)
   // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!form.tenant || !form.month || form.paidAmount <= 0) {
+      alert("Fill all fields ❌");
+      return;
+    }
 
     const res = await fetch("/api/payments", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        ...form,
-        isAdmin: true, // 🔥 MOST IMPORTANT FIX
-      }),
+      body: JSON.stringify(form), // ❌ isAdmin removed
     });
 
     const data = await res.json();
@@ -59,7 +61,7 @@ export default function Page() {
   };
 
   // ===============================
-  // FILTER (FIXED)
+  // FILTER
   // ===============================
   const filtered = payments.filter(
     (p) => String(p.tenant?._id) === String(selectedTenant)
@@ -116,6 +118,7 @@ export default function Page() {
         <input
           type="month"
           className="border p-2"
+          max={new Date().toISOString().slice(0, 7)} // 🔥 future block
           onChange={(e) => {
             const date = new Date(e.target.value);
             const month = date.toLocaleString("default", {
@@ -146,7 +149,7 @@ export default function Page() {
       {/* ================= EMPTY ================= */}
       {!selectedTenant && (
         <p className="text-gray-500">
-          👆 Select tenant to view payments
+          👆 Select tenant
         </p>
       )}
 
@@ -179,28 +182,76 @@ export default function Page() {
                     <p>Status: {p.status}</p>
                   </div>
 
-                  {/* RIGHT ✔ BUTTON */}
-                  {p.status !== "paid" && (
+                  {/* RIGHT BUTTONS */}
+                  <div className="flex flex-col gap-2">
+
+                    {/* ✔ MARK PAID */}
+                    {p.status !== "paid" && (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/payments/mark-paid", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({ id: p._id }), // ❌ no admin
+                          });
+                          loadData();
+                        }}
+                        className="bg-white text-green-600 px-2 py-1 rounded"
+                      >
+                        ✔
+                      </button>
+                    )}
+
+                    {/* ✏️ EDIT */}
                     <button
                       onClick={async () => {
-                        await fetch("/api/payments/mark-paid", {
+                        const newAmount = prompt("Enter amount");
+
+                        if (!newAmount || Number(newAmount) <= 0) return;
+
+                        await fetch("/api/payments", {
                           method: "POST",
                           headers: {
                             "Content-Type": "application/json",
                           },
                           body: JSON.stringify({
-                            id: p._id,
-                            isAdmin: true, // 🔥 FIX
+                            tenant: p.tenant._id,
+                            month: p.month,
+                            paidAmount: Number(newAmount),
                           }),
                         });
 
                         loadData();
                       }}
-                      className="bg-white text-green-600 px-3 py-2 rounded shadow hover:scale-105"
+                      className="bg-yellow-400 text-black px-2 py-1 rounded"
                     >
-                      ✔
+                      ✏️
                     </button>
-                  )}
+
+                    {/* ❌ DELETE */}
+                    <button
+                      onClick={async () => {
+                        const ok = confirm("Delete?");
+                        if (!ok) return;
+
+                        await fetch("/api/payments/delete", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          body: JSON.stringify({ id: p._id }), // ❌ no admin
+                        });
+
+                        loadData();
+                      }}
+                      className="bg-black text-white px-2 py-1 rounded"
+                    >
+                      ✖
+                    </button>
+
+                  </div>
 
                 </div>
               </div>
