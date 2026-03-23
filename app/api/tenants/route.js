@@ -1,10 +1,11 @@
 import { connectDB } from "../../../lib/mongodb";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
-import Payment from "../../../models/Payment"; // 🔥 ADD THIS
+import Payment from "../../../models/Payment";
+import jwt from "jsonwebtoken"; // 🔐 ADD
 
 // ===============================
-// GET
+// GET (optional open)
 // ===============================
 export async function GET() {
   try {
@@ -20,14 +21,34 @@ export async function GET() {
 }
 
 // ===============================
-// POST (ADD TENANT + AUTO RENT)
+// POST (🔐 ADD TENANT + AUTO RENT)
 // ===============================
 export async function POST(req) {
   try {
     await connectDB();
 
+    // 🔐 JWT CHECK
+    const token = req.headers.get("authorization");
+
+    if (!token) {
+      return Response.json({
+        success: false,
+        message: "No token ❌",
+      });
+    }
+
+    try {
+      jwt.verify(token, "MY_SECRET_KEY");
+    } catch {
+      return Response.json({
+        success: false,
+        message: "Invalid token ❌",
+      });
+    }
+
     const body = await req.json();
 
+    // ✅ CREATE TENANT
     const tenant = await Tenant.create(body);
 
     // 🔥 ROOM UPDATE
@@ -39,7 +60,7 @@ export async function POST(req) {
       }
     );
 
-    // 🔥 AUTO GENERATE 12 MONTH PAYMENTS
+    // 🔥 AUTO GENERATE PAYMENTS
     const monthsToGenerate = 12;
 
     for (let i = 0; i < monthsToGenerate; i++) {
@@ -52,14 +73,22 @@ export async function POST(req) {
         year: "numeric",
       });
 
-      await Payment.create({
+      // 🔁 DUPLICATE CHECK
+      const exists = await Payment.findOne({
         tenant: tenant._id,
         month,
-        totalRent: tenant.rentAmount,
-        paidAmount: 0,
-        remainingAmount: tenant.rentAmount,
-        status: "unpaid",
       });
+
+      if (!exists) {
+        await Payment.create({
+          tenant: tenant._id,
+          month,
+          totalRent: tenant.rentAmount,
+          paidAmount: 0,
+          remainingAmount: tenant.rentAmount,
+          status: "unpaid",
+        });
+      }
     }
 
     return Response.json({ success: true });
