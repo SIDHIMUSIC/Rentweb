@@ -1,11 +1,15 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
+  const router = useRouter();
+
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
   const [openId, setOpenId] = useState(null);
+  const [token, setToken] = useState(""); // 🔥 FIX
 
   const [form, setForm] = useState({
     tenant: "",
@@ -13,24 +17,29 @@ export default function Page() {
     paidAmount: 0,
   });
 
-  // 🔐 TOKEN
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("token")
-      : "";
+  // 🔐 TOKEN LOAD + PROTECT
+  useEffect(() => {
+    const t = localStorage.getItem("token");
+
+    if (!t) {
+      router.push("/login"); // 🔥 redirect
+    } else {
+      setToken(t); // 🔥 FIX
+    }
+  }, []);
 
   // LOAD DATA
-  const loadData = async () => {
+  const loadData = async (tkn) => {
     try {
       const t = await fetch("/api/tenants", {
         headers: {
-          Authorization: token,
+          Authorization: tkn,
         },
       }).then((r) => r.json());
 
       const p = await fetch("/api/payments", {
         headers: {
-          Authorization: token,
+          Authorization: tkn,
         },
       }).then((r) => r.json());
 
@@ -41,9 +50,12 @@ export default function Page() {
     }
   };
 
+  // 🔥 LOAD AFTER TOKEN
   useEffect(() => {
-    loadData();
-  }, []);
+    if (token) {
+      loadData(token);
+    }
+  }, [token]);
 
   // SAVE
   const handleSubmit = async (e) => {
@@ -58,7 +70,7 @@ export default function Page() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: token, // 🔐
+        Authorization: token,
       },
       body: JSON.stringify(form),
     });
@@ -67,7 +79,7 @@ export default function Page() {
 
     if (data.success) {
       alert("Saved ✅");
-      loadData();
+      loadData(token);
     } else {
       alert(data.message || "Error ❌");
     }
@@ -218,7 +230,6 @@ export default function Page() {
                       className="flex flex-col gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {/* ✔ */}
                       {p.status !== "paid" && (
                         <button
                           onClick={async () => {
@@ -230,7 +241,7 @@ export default function Page() {
                               },
                               body: JSON.stringify({ id: p._id }),
                             });
-                            loadData();
+                            loadData(token);
                           }}
                           className="bg-white text-green-600 px-2 py-1 rounded"
                         >
@@ -238,7 +249,6 @@ export default function Page() {
                         </button>
                       )}
 
-                      {/* ✏️ */}
                       <button
                         onClick={async () => {
                           const newAmount = prompt("Enter amount");
@@ -257,14 +267,13 @@ export default function Page() {
                             }),
                           });
 
-                          loadData();
+                          loadData(token);
                         }}
                         className="bg-yellow-400 text-black px-2 py-1 rounded"
                       >
                         ✏️
                       </button>
 
-                      {/* ❌ */}
                       <button
                         onClick={async () => {
                           const ok = confirm("Delete?");
@@ -279,7 +288,7 @@ export default function Page() {
                             body: JSON.stringify({ id: p._id }),
                           });
 
-                          loadData();
+                          loadData(token);
                         }}
                         className="bg-black text-white px-2 py-1 rounded"
                       >
