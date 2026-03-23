@@ -11,30 +11,50 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 PROTECT
+  // 🔐 PAGE PROTECT + REDIRECT FIX
   useEffect(() => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      localStorage.setItem("redirect", "/tenants");
-      window.location.href = "/login";
+      localStorage.setItem("redirect", "/tenants"); // 🔥 SAVE PAGE
+      window.location.href = "/login"; // 🔥 STRONG REDIRECT
     } else {
       loadData(token);
     }
   }, []);
 
+  // ✅ LOAD DATA
   const loadData = async (token) => {
-    const res = await fetch("/api/tenants", {
-      headers: { Authorization: token },
-    });
-    const data = await res.json();
-    setTenants(data || []);
+    try {
+      const res = await fetch("/api/tenants", {
+        headers: {
+          Authorization: token,
+        },
+      });
+
+      const data = await res.json();
+      setTenants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
+  // ✅ ADD TENANT (FINAL FIX)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     const token = localStorage.getItem("token");
+
+    if (!token) {
+      localStorage.setItem("redirect", "/tenants");
+      window.location.href = "/login";
+      return;
+    }
+
+    if (!form.name || !form.roomNumber) {
+      alert("Fill required fields ❌");
+      return;
+    }
 
     const res = await fetch("/api/tenants", {
       method: "POST",
@@ -49,27 +69,162 @@ export default function Page() {
 
     if (data.success) {
       alert("Added ✅");
+
+      setForm({
+        name: "",
+        phone: "",
+        roomNumber: "",
+        rentAmount: 3000,
+        startDate: "",
+      });
+
+      loadData(token);
+    } else {
+      alert(data.message || "Error ❌");
+    }
+  };
+
+  // ✅ DELETE
+  const deleteTenant = async (id) => {
+    const token = localStorage.getItem("token");
+
+    const ok = confirm("Delete?");
+    if (!ok) return;
+
+    const res = await fetch(`/api/tenants/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: token,
+      },
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Deleted ✅");
+      loadData(token);
+    }
+  };
+
+  // ✅ EDIT
+  const editTenant = async (t) => {
+    const token = localStorage.getItem("token");
+
+    const name = prompt("Name", t.name);
+    const phone = prompt("Phone", t.phone);
+    const rent = prompt("Rent", t.rentAmount);
+
+    const res = await fetch(`/api/tenants/${t._id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        name,
+        phone,
+        rentAmount: Number(rent),
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Updated ✅");
       loadData(token);
     }
   };
 
   return (
-    <div className="p-6">
-      <h1>Tenants</h1>
+    <div className="p-6 bg-gray-100 min-h-screen">
+      <h1 className="text-2xl font-bold mb-6 text-blue-600">
+        👥 Tenants
+      </h1>
 
-      <form onSubmit={handleSubmit}>
-        <input placeholder="Name"
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+      {/* FORM */}
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded shadow"
+      >
+        <input
+          placeholder="Name"
+          className="border p-2"
+          value={form.name}
+          onChange={(e) =>
+            setForm({ ...form, name: e.target.value })
+          }
         />
-        <input placeholder="Room"
-          onChange={(e) => setForm({ ...form, roomNumber: e.target.value })}
+
+        <input
+          placeholder="Phone"
+          className="border p-2"
+          value={form.phone}
+          onChange={(e) =>
+            setForm({ ...form, phone: e.target.value })
+          }
         />
-        <button>Add</button>
+
+        <input
+          placeholder="Room"
+          className="border p-2"
+          value={form.roomNumber}
+          onChange={(e) =>
+            setForm({ ...form, roomNumber: e.target.value })
+          }
+        />
+
+        <input
+          type="number"
+          className="border p-2"
+          value={form.rentAmount}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              rentAmount: Number(e.target.value),
+            })
+          }
+        />
+
+        <input
+          type="date"
+          className="border p-2"
+          value={form.startDate}
+          onChange={(e) =>
+            setForm({ ...form, startDate: e.target.value })
+          }
+        />
+
+        <button className="bg-blue-500 text-white px-4 py-2 rounded">
+          Add
+        </button>
       </form>
 
-      {tenants.map((t) => (
-        <div key={t._id}>{t.name}</div>
-      ))}
+      {/* LIST */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {tenants.map((t) => (
+          <div key={t._id} className="bg-white p-4 rounded shadow">
+            <p className="font-bold">{t.name}</p>
+            <p>{t.roomNumber}</p>
+            <p>₹{t.rentAmount}</p>
+
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => editTenant(t)}
+                className="bg-yellow-500 text-white px-2"
+              >
+                Edit
+              </button>
+
+              <button
+                onClick={() => deleteTenant(t._id)}
+                className="bg-red-500 text-white px-2"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
