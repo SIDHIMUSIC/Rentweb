@@ -1,69 +1,96 @@
-import { connectDB } from "@/lib/mongodb";
-import Tenant from "@/models/Tenant";
-import Room from "@/models/Room";
+import { connectDB } from "../../../../lib/mongodb";
+import Tenant from "../../../../models/Tenant";
+import Room from "../../../../models/Room";
 import jwt from "jsonwebtoken";
 
-export async function PUT(req, { params }) {
+// DELETE
+export async function DELETE(req, { params }) {
   await connectDB();
 
-  // 🔐 TOKEN CHECK
-  const token = req.headers.get("authorization");
+  const tenant = await Tenant.findById(params.id);
 
-  if (!token) {
-    return Response.json({
-      success: false,
-      message: "No token ❌",
-    });
+  if (tenant) {
+    await Room.findOneAndUpdate(
+      { roomNumber: tenant.roomNumber },
+      {
+        status: "vacant",
+        tenantName: "",
+      }
+    );
   }
 
+  await Tenant.findByIdAndDelete(params.id);
+
+  return Response.json({ success: true });
+}
+
+// PUT (🔥 FINAL WORKING EDIT)
+export async function PUT(req, { params }) {
   try {
-    jwt.verify(token, process.env.JWT_SECRET);
-  } catch {
-    return Response.json({
-      success: false,
-      message: "Invalid token ❌",
-    });
-  }
+    await connectDB();
 
-  const body = await req.json();
+    const token = req.headers.get("authorization");
 
-  const oldTenant = await Tenant.findById(params.id);
-
-  if (!oldTenant) {
-    return Response.json({ success: false });
-  }
-
-  // 🔥 ROOM CHANGE
-  if (oldTenant.roomNumber !== body.roomNumber) {
-
-    const newRoom = await Room.findOne({
-      roomNumber: body.roomNumber,
-    });
-
-    if (newRoom?.status === "occupied") {
-      return Response.json({
-        success: false,
-        message: "Room already occupied ❌",
-      });
+    if (!token) {
+      return Response.json({ success: false, message: "No token ❌" });
     }
 
-    // OLD → vacant
-    await Room.findOneAndUpdate(
-      { roomNumber: oldTenant.roomNumber },
-      { status: "vacant", tenantName: "" }
-    );
+    try {
+      jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      return Response.json({ success: false, message: "Invalid token ❌" });
+    }
 
-    // NEW → occupied
-    await Room.findOneAndUpdate(
-      { roomNumber: body.roomNumber },
-      { status: "occupied", tenantName: body.name }
-    );
+    const body = await req.json();
+
+    const oldTenant = await Tenant.findById(params.id);
+
+    if (!oldTenant) {
+      return Response.json({ success: false, message: "Not found ❌" });
+    }
+
+    // 🔥 ROOM CHANGE
+    if (oldTenant.roomNumber !== body.roomNumber) {
+      const newRoom = await Room.findOne({
+        roomNumber: body.roomNumber,
+      });
+
+      if (newRoom?.status === "occupied") {
+        return Response.json({
+          success: false,
+          message: "Room already occupied ❌",
+        });
+      }
+
+      // OLD ROOM VACANT
+      await Room.findOneAndUpdate(
+        { roomNumber: oldTenant.roomNumber },
+        {
+          status: "vacant",
+          tenantName: "",
+        }
+      );
+
+      // NEW ROOM OCCUPIED
+      await Room.findOneAndUpdate(
+        { roomNumber: body.roomNumber },
+        {
+          status: "occupied",
+          tenantName: body.name,
+        }
+      );
+    }
+
+    // UPDATE TENANT
+    await Tenant.findByIdAndUpdate(params.id, body);
+
+    return Response.json({ success: true });
+
+  } catch (err) {
+    console.log("PUT ERROR:", err);
+    return Response.json({
+      success: false,
+      message: "Server error ❌",
+    });
   }
-
-  await Tenant.findByIdAndUpdate(params.id, body);
-
-  return Response.json({
-    success: true,
-    message: "Updated ✅",
-  });
 }
