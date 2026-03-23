@@ -1,9 +1,10 @@
 import { connectDB } from "../../../lib/mongodb";
 import Payment from "../../../models/Payment";
 import Tenant from "../../../models/Tenant";
+import jwt from "jsonwebtoken";
 
 // ===============================
-// GET ALL PAYMENTS
+// GET ALL PAYMENTS (optional open)
 // ===============================
 export async function GET() {
   await connectDB();
@@ -14,10 +15,29 @@ export async function GET() {
 }
 
 // ===============================
-// SAVE / UPDATE PAYMENT
+// SAVE / UPDATE PAYMENT (🔐 PROTECTED)
 // ===============================
 export async function POST(req) {
   await connectDB();
+
+  // 🔐 JWT CHECK
+  const token = req.headers.get("authorization");
+
+  if (!token) {
+    return Response.json({
+      success: false,
+      message: "No token ❌",
+    });
+  }
+
+  try {
+    jwt.verify(token, "MY_SECRET_KEY");
+  } catch {
+    return Response.json({
+      success: false,
+      message: "Invalid token ❌",
+    });
+  }
 
   const body = await req.json();
 
@@ -34,9 +54,8 @@ export async function POST(req) {
   }
 
   // ===============================
-  // 🔥 DATE VALIDATION (FINAL FIX)
+  // DATE VALIDATION
   // ===============================
-
   const monthMap = {
     Jan: 0, Feb: 1, Mar: 2, Apr: 3,
     May: 4, Jun: 5, Jul: 6, Aug: 7,
@@ -65,7 +84,6 @@ export async function POST(req) {
   const startDate = new Date(tenant.startDate);
   const today = new Date();
 
-  // ❌ invalid date
   if (isNaN(selectedDate.getTime())) {
     return Response.json({
       success: false,
@@ -73,7 +91,6 @@ export async function POST(req) {
     });
   }
 
-  // ❌ before tenant start
   if (selectedDate < startDate) {
     return Response.json({
       success: false,
@@ -81,7 +98,6 @@ export async function POST(req) {
     });
   }
 
-  // ❌ FUTURE BLOCK (🔥 MAIN FIX)
   if (
     selectedDate.getFullYear() > today.getFullYear() ||
     (selectedDate.getFullYear() === today.getFullYear() &&
@@ -97,7 +113,7 @@ export async function POST(req) {
   const month = body.month;
 
   // ===============================
-  // CHECK EXISTING PAYMENT
+  // CHECK EXISTING
   // ===============================
   let existing = await Payment.findOne({
     tenant: body.tenant,
@@ -105,7 +121,7 @@ export async function POST(req) {
   });
 
   // ===============================
-  // UPDATE EXISTING
+  // UPDATE
   // ===============================
   if (existing) {
     let newPaid = existing.paidAmount + body.paidAmount;
@@ -128,7 +144,7 @@ export async function POST(req) {
   }
 
   // ===============================
-  // CREATE NEW PAYMENT
+  // CREATE
   // ===============================
   let paid = body.paidAmount;
 
