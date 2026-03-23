@@ -14,13 +14,12 @@ export default function Page() {
     paidAmount: 0,
   });
 
-  // 🔐 PROTECT + REDIRECT FIX
+  // 🔐 AUTH
   useEffect(() => {
     const t = localStorage.getItem("token");
-
     if (!t) {
-      localStorage.setItem("redirect", "/payments"); // 🔥 SAVE PAGE
-      window.location.href = "/login"; // 🔥 HARD REDIRECT
+      localStorage.setItem("redirect", "/payments");
+      window.location.href = "/login";
     } else {
       setToken(t);
     }
@@ -28,30 +27,23 @@ export default function Page() {
 
   // LOAD DATA
   const loadData = async (tkn) => {
-    try {
-      const t = await fetch("/api/tenants", {
-        headers: { Authorization: tkn },
-      }).then((r) => r.json());
+    const t = await fetch("/api/tenants", {
+      headers: { Authorization: tkn },
+    }).then((r) => r.json());
 
-      const p = await fetch("/api/payments", {
-        headers: { Authorization: tkn },
-      }).then((r) => r.json());
+    const p = await fetch("/api/payments", {
+      headers: { Authorization: tkn },
+    }).then((r) => r.json());
 
-      setTenants(Array.isArray(t) ? t : []);
-      setPayments(Array.isArray(p) ? p : []);
-    } catch (err) {
-      console.log(err);
-    }
+    setTenants(Array.isArray(t) ? t : []);
+    setPayments(Array.isArray(p) ? p : []);
   };
 
-  // 🔥 LOAD AFTER TOKEN
   useEffect(() => {
-    if (token) {
-      loadData(token);
-    }
+    if (token) loadData(token);
   }, [token]);
 
-  // SAVE PAYMENT
+  // SAVE
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -74,8 +66,6 @@ export default function Page() {
     if (data.success) {
       alert("Saved ✅");
       loadData(token);
-    } else {
-      alert(data.message || "Error ❌");
     }
   };
 
@@ -129,7 +119,6 @@ export default function Page() {
         <input
           type="month"
           className="border p-2"
-          max={new Date().toISOString().slice(0, 7)}
           onChange={(e) => {
             const date = new Date(e.target.value);
             const month = date.toLocaleString("default", {
@@ -176,10 +165,87 @@ export default function Page() {
               return (
                 <div
                   key={p._id}
-                  className={`p-4 rounded text-white ${bg}`}
+                  className={`p-4 rounded text-white flex justify-between items-center ${bg}`}
                 >
-                  <p>{p.month}</p>
-                  <p>₹{p.remainingAmount}</p>
+                  {/* LEFT */}
+                  <div>
+                    <p className="font-bold">{p.month}</p>
+                    <p>Remaining: ₹{p.remainingAmount}</p>
+                  </div>
+
+                  {/* RIGHT BUTTONS 🔥 */}
+                  <div
+                    className="flex gap-2"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {/* ✔ */}
+                    {p.status !== "paid" && (
+                      <button
+                        onClick={async () => {
+                          await fetch("/api/payments/mark-paid", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                              Authorization: token,
+                            },
+                            body: JSON.stringify({ id: p._id }),
+                          });
+                          loadData(token);
+                        }}
+                        className="bg-white text-green-600 px-2 py-1 rounded"
+                      >
+                        ✔
+                      </button>
+                    )}
+
+                    {/* ✏️ */}
+                    <button
+                      onClick={async () => {
+                        const amt = prompt("Enter amount");
+                        if (!amt) return;
+
+                        await fetch("/api/payments", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: token,
+                          },
+                          body: JSON.stringify({
+                            tenant: p.tenant._id,
+                            month: p.month,
+                            paidAmount: Number(amt),
+                          }),
+                        });
+
+                        loadData(token);
+                      }}
+                      className="bg-yellow-400 text-black px-2 py-1 rounded"
+                    >
+                      ✏️
+                    </button>
+
+                    {/* ❌ */}
+                    <button
+                      onClick={async () => {
+                        const ok = confirm("Delete?");
+                        if (!ok) return;
+
+                        await fetch("/api/payments/delete", {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "application/json",
+                            Authorization: token,
+                          },
+                          body: JSON.stringify({ id: p._id }),
+                        });
+
+                        loadData(token);
+                      }}
+                      className="bg-black text-white px-2 py-1 rounded"
+                    >
+                      ❌
+                    </button>
+                  </div>
                 </div>
               );
             })}
