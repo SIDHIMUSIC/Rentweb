@@ -5,7 +5,6 @@ export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
-  const [openId, setOpenId] = useState(null);
   const [token, setToken] = useState("");
 
   const [form, setForm] = useState({
@@ -43,11 +42,11 @@ export default function Page() {
     if (token) loadData(token);
   }, [token]);
 
-  // SAVE
+  // SAVE PAYMENT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!form.tenant || !form.month || form.paidAmount <= 0) {
+    if (!form.tenant || form.paidAmount <= 0) {
       alert("Fill all fields ❌");
       return;
     }
@@ -173,11 +172,9 @@ export default function Page() {
                     <p>Remaining: ₹{p.remainingAmount}</p>
                   </div>
 
-                  {/* RIGHT BUTTONS 🔥 */}
-                  <div
-                    className="flex gap-2"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  {/* RIGHT BUTTONS */}
+                  <div className="flex gap-2">
+
                     {/* ✔ */}
                     {p.status !== "paid" && (
                       <button
@@ -212,7 +209,6 @@ export default function Page() {
                           },
                           body: JSON.stringify({
                             tenant: p.tenant._id,
-                            month: p.month,
                             paidAmount: Number(amt),
                           }),
                         });
@@ -222,6 +218,53 @@ export default function Page() {
                       className="bg-yellow-400 text-black px-2 py-1 rounded"
                     >
                       ✏️
+                    </button>
+
+                    {/* 🧾 RECEIPT */}
+                    <button
+                      onClick={() => {
+                        const html = `
+                        <html>
+                        <body style="font-family:Arial;padding:20px">
+                          <div style="border:2px solid black;padding:20px;width:350px;margin:auto">
+                            
+                            <h2 style="text-align:center;color:cyan">
+                              HARRY RENT HOUSE
+                            </h2>
+
+                            <p style="text-align:center">
+                              Bihar Sharif, 803216
+                            </p>
+
+                            <hr/>
+
+                            <p>Tenant: ${p.tenant?.name}</p>
+                            <p>Room: ${p.tenant?.roomNumber}</p>
+                            <p>Month: ${p.month}</p>
+
+                            <hr/>
+
+                            <p>Total: ₹${p.totalRent}</p>
+                            <p>Paid: ₹${p.paidAmount}</p>
+                            <p>Remaining: ₹${p.remainingAmount}</p>
+
+                            <hr/>
+
+                            <p style="text-align:right">Sign ✍️</p>
+
+                          </div>
+                        </body>
+                        </html>
+                        `;
+
+                        const win = window.open("", "", "width=400,height=600");
+                        win.document.write(html);
+                        win.document.close();
+                        win.print();
+                      }}
+                      className="bg-blue-500 text-white px-2 py-1 rounded"
+                    >
+                      🧾
                     </button>
 
                     {/* ❌ */}
@@ -245,6 +288,7 @@ export default function Page() {
                     >
                       ❌
                     </button>
+
                   </div>
                 </div>
               );
