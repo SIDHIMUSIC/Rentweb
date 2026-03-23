@@ -5,6 +5,7 @@ export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
+  const [openId, setOpenId] = useState(null); // 🔥 accordion
 
   const [form, setForm] = useState({
     tenant: "",
@@ -32,7 +33,7 @@ export default function Page() {
   }, []);
 
   // ===============================
-  // SAVE PAYMENT (NO ADMIN 🔥)
+  // SAVE PAYMENT
   // ===============================
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -47,7 +48,7 @@ export default function Page() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(form), // ❌ isAdmin removed
+      body: JSON.stringify(form),
     });
 
     const data = await res.json();
@@ -118,7 +119,7 @@ export default function Page() {
         <input
           type="month"
           className="border p-2"
-          max={new Date().toISOString().slice(0, 7)} // 🔥 future block
+          max={new Date().toISOString().slice(0, 7)}
           onChange={(e) => {
             const date = new Date(e.target.value);
             const month = date.toLocaleString("default", {
@@ -146,14 +147,10 @@ export default function Page() {
         </button>
       </form>
 
-      {/* ================= EMPTY ================= */}
       {!selectedTenant && (
-        <p className="text-gray-500">
-          👆 Select tenant
-        </p>
+        <p className="text-gray-500">👆 Select tenant</p>
       )}
 
-      {/* ================= LIST ================= */}
       {selectedTenant && (
         <>
           <div className="bg-red-100 p-3 mb-4 rounded font-bold">
@@ -164,7 +161,10 @@ export default function Page() {
             {sorted.map((p) => (
               <div
                 key={p._id}
-                className={`p-4 rounded text-white shadow ${
+                onClick={() =>
+                  setOpenId(openId === p._id ? null : p._id)
+                }
+                className={`p-4 rounded text-white shadow cursor-pointer ${
                   p.status === "paid"
                     ? "bg-green-500"
                     : p.status === "partial"
@@ -180,12 +180,32 @@ export default function Page() {
                     <p>Paid: ₹{p.paidAmount}</p>
                     <p>Remaining: ₹{p.remainingAmount}</p>
                     <p>Status: {p.status}</p>
+
+                    {/* 🔽 DETAILS */}
+                    {openId === p._id && (
+                      <div className="mt-3 bg-white text-black p-3 rounded">
+                        <p><b>Total Rent:</b> ₹{p.totalRent}</p>
+                        <p><b>Paid:</b> ₹{p.paidAmount}</p>
+                        <p><b>Remaining:</b> ₹{p.remainingAmount}</p>
+                        <p><b>Status:</b> {p.status}</p>
+
+                        {p.createdAt && (
+                          <p>
+                            <b>Created:</b>{" "}
+                            {new Date(p.createdAt).toLocaleDateString()}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* RIGHT BUTTONS */}
-                  <div className="flex flex-col gap-2">
+                  <div
+                    className="flex flex-col gap-2"
+                    onClick={(e) => e.stopPropagation()} // 🔥 prevent toggle
+                  >
 
-                    {/* ✔ MARK PAID */}
+                    {/* ✔ */}
                     {p.status !== "paid" && (
                       <button
                         onClick={async () => {
@@ -194,7 +214,7 @@ export default function Page() {
                             headers: {
                               "Content-Type": "application/json",
                             },
-                            body: JSON.stringify({ id: p._id }), // ❌ no admin
+                            body: JSON.stringify({ id: p._id }),
                           });
                           loadData();
                         }}
@@ -208,7 +228,6 @@ export default function Page() {
                     <button
                       onClick={async () => {
                         const newAmount = prompt("Enter amount");
-
                         if (!newAmount || Number(newAmount) <= 0) return;
 
                         await fetch("/api/payments", {
@@ -241,7 +260,7 @@ export default function Page() {
                           headers: {
                             "Content-Type": "application/json",
                           },
-                          body: JSON.stringify({ id: p._id }), // ❌ no admin
+                          body: JSON.stringify({ id: p._id }),
                         });
 
                         loadData();
@@ -252,7 +271,6 @@ export default function Page() {
                     </button>
 
                   </div>
-
                 </div>
               </div>
             ))}
