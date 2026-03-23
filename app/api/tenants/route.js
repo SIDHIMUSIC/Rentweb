@@ -1,15 +1,23 @@
 import { connectDB } from "../../../lib/mongodb";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
-import Payment from "../../../models/Payment";
 import jwt from "jsonwebtoken";
 
+// ✅ GET (FIXED)
 export async function GET() {
-  await connectDB();
-  const tenants = await Tenant.find();
-  return Response.json(tenants || []);
+  try {
+    await connectDB();
+
+    const tenants = await Tenant.find().lean(); // 🔥 IMPORTANT
+
+    return Response.json(tenants);
+  } catch (err) {
+    console.log("GET ERROR:", err);
+    return Response.json([]);
+  }
 }
 
+// ✅ POST
 export async function POST(req) {
   await connectDB();
 
