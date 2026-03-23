@@ -14,7 +14,7 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 AUTH + LOAD
+  // 🔐 AUTH CHECK
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -26,9 +26,9 @@ export default function Page() {
     }
   }, []);
 
+  // 🔥 INIT LOAD
   const init = async (token) => {
-    await loadData(token);
-    await loadRooms();
+    await Promise.all([loadData(token), loadRooms()]);
     setLoading(false);
   };
 
@@ -38,7 +38,9 @@ export default function Page() {
       const res = await fetch("/api/tenants", {
         headers: { Authorization: token },
       });
+
       const data = await res.json();
+
       setTenants(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log("TENANT LOAD ERROR:", err);
@@ -50,13 +52,14 @@ export default function Page() {
     try {
       const res = await fetch("/api/rooms/available");
       const data = await res.json();
+
       setRooms(Array.isArray(data) ? data : []);
     } catch (err) {
       console.log("ROOM LOAD ERROR:", err);
     }
   };
 
-  // ✅ ADD
+  // ✅ ADD TENANT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -90,8 +93,7 @@ export default function Page() {
           startDate: "",
         });
 
-        await loadData(token);
-        await loadRooms();
+        await init(token); // 🔥 full reload
       } else {
         alert(data.message || "Error ❌");
       }
@@ -117,15 +119,14 @@ export default function Page() {
 
       if (data.success) {
         alert("Deleted ✅");
-        await loadData(token);
-        await loadRooms();
+        await init(token); // 🔥 reload
       }
     } catch (err) {
       console.log("DELETE ERROR:", err);
     }
   };
 
-  // ✅ EDIT (FINAL FIX)
+  // ✅ EDIT (🔥 FINAL FIX)
   const editTenant = async (t) => {
     const token = localStorage.getItem("token");
 
@@ -154,14 +155,20 @@ export default function Page() {
         }),
       });
 
-      const data = await res.json();
+      // 🔥 SAFE JSON PARSE FIX
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        alert("Server error ❌");
+        return;
+      }
 
       console.log("EDIT RESPONSE:", data);
 
       if (data.success) {
         alert("Updated ✅");
-        await loadData(token);
-        await loadRooms();
+        await init(token); // 🔥 reload all
       } else {
         alert(data.message || "Error ❌");
       }
@@ -170,9 +177,9 @@ export default function Page() {
     }
   };
 
-  // 🔥 LOADING STATE
+  // 🔥 LOADING
   if (loading) {
-    return <div className="p-6">Loading...</div>;
+    return <div className="p-6 text-lg">Loading...</div>;
   }
 
   return (
@@ -204,7 +211,7 @@ export default function Page() {
           }
         />
 
-        {/* 🔥 ROOM DROPDOWN */}
+        {/* ROOM DROPDOWN */}
         <select
           className="border p-2"
           value={form.roomNumber}
