@@ -14,30 +14,38 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 PAGE PROTECT
+  // 🔐 PAGE PROTECT + LOAD DATA
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (!token) {
       router.push("/login");
+    } else {
+      loadData(token); // ✅ FIX
     }
   }, []);
 
-  // LOAD DATA
-  const loadData = async () => {
-    const res = await fetch("/api/tenants");
-    const data = await res.json();
-    setTenants(Array.isArray(data) ? data : []);
+  // ✅ LOAD DATA WITH TOKEN
+  const loadData = async (token) => {
+    try {
+      const res = await fetch("/api/tenants", {
+        headers: {
+          Authorization: token,
+        },
+      });
+
+      const data = await res.json();
+      setTenants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  // ✅ ADD TENANT (FINAL FIX)
+  // ✅ ADD TENANT (FINAL)
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const token = localStorage.getItem("token"); // 🔥 IMPORTANT
+    const token = localStorage.getItem("token");
 
     if (!token) {
       alert("Login required ❌");
@@ -67,13 +75,13 @@ export default function Page() {
         startDate: "",
       });
 
-      loadData();
+      loadData(token); // ✅ reload
     } else {
       alert(data.message || "Error ❌");
     }
   };
 
-  // DELETE
+  // ✅ DELETE
   const deleteTenant = async (id) => {
     const token = localStorage.getItem("token");
 
@@ -88,11 +96,11 @@ export default function Page() {
 
     if (data.success) {
       alert("Deleted ✅");
-      loadData();
+      loadData(token);
     }
   };
 
-  // EDIT
+  // ✅ EDIT
   const editTenant = async (t) => {
     const token = localStorage.getItem("token");
 
@@ -117,7 +125,7 @@ export default function Page() {
 
     if (data.success) {
       alert("Updated ✅");
-      loadData();
+      loadData(token);
     }
   };
 
