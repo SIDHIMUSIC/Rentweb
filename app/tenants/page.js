@@ -14,7 +14,7 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 AUTH CHECK
+  // 🔐 AUTH
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -26,22 +26,23 @@ export default function Page() {
     }
   }, []);
 
-  // 🔥 INIT LOAD
+  // 🔥 INIT
   const init = async (token) => {
     await Promise.all([loadData(token), loadRooms()]);
     setLoading(false);
   };
 
-  // ✅ LOAD TENANTS
+  // ✅ LOAD TENANTS (🔥 FIXED)
   const loadData = async (token) => {
     try {
       const res = await fetch("/api/tenants", {
         headers: { Authorization: token },
+        cache: "no-store", // 🔥 FIX
       });
 
       const data = await res.json();
 
-      setTenants(Array.isArray(data) ? data : []);
+      setTenants([...data]); // 🔥 FORCE UPDATE
     } catch (err) {
       console.log("TENANT LOAD ERROR:", err);
     }
@@ -59,7 +60,7 @@ export default function Page() {
     }
   };
 
-  // ✅ ADD TENANT
+  // ✅ ADD
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -93,7 +94,7 @@ export default function Page() {
           startDate: "",
         });
 
-        await init(token); // 🔥 full reload
+        await init(token);
       } else {
         alert(data.message || "Error ❌");
       }
@@ -119,7 +120,7 @@ export default function Page() {
 
       if (data.success) {
         alert("Deleted ✅");
-        await init(token); // 🔥 reload
+        await init(token);
       }
     } catch (err) {
       console.log("DELETE ERROR:", err);
@@ -155,20 +156,16 @@ export default function Page() {
         }),
       });
 
-      // 🔥 SAFE JSON PARSE FIX
-      let data;
-      try {
-        data = await res.json();
-      } catch {
-        alert("Server error ❌");
-        return;
-      }
+      const data = await res.json();
 
       console.log("EDIT RESPONSE:", data);
 
       if (data.success) {
         alert("Updated ✅");
-        await init(token); // 🔥 reload all
+
+        await init(token);
+
+        window.location.reload(); // 🔥 FINAL FORCE FIX
       } else {
         alert(data.message || "Error ❌");
       }
@@ -211,7 +208,6 @@ export default function Page() {
           }
         />
 
-        {/* ROOM DROPDOWN */}
         <select
           className="border p-2"
           value={form.roomNumber}
