@@ -1,10 +1,18 @@
-import { connectDB } from "@/lib/mongodb";
-import Room from "@/models/Room";
+import { connectDB } from "../../../../lib/mongodb";
+import Room from "../../../../models/Room";
 
 export async function GET() {
-  await connectDB();
+  try {
+    await connectDB();
 
-  const rooms = await Room.find({ status: "vacant" });
+    // 🔥 ONLY VACANT ROOMS
+    const rooms = await Room.find({
+      status: "vacant",
+    }).lean();
 
-  return Response.json(rooms);
+    return Response.json(rooms);
+  } catch (err) {
+    console.log("ROOM ERROR:", err);
+    return Response.json([]);
+  }
 }
