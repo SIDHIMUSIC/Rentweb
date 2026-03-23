@@ -8,11 +8,13 @@ export async function POST(req) {
   if (username === "admin" && password === "1234") {
     const token = jwt.sign(
       { role: "admin" },
-      process.env.JWT_SECRET, // 🔥 FIXED
-      { expiresIn: "1d" }
+      process.env.JWT_SECRET
     );
 
-    return Response.json({ success: true, token });
+    return Response.json({
+      success: true,
+      token,
+    });
   }
 
   return Response.json({
