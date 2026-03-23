@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 
 export default function Page() {
   const [tenants, setTenants] = useState([]);
+  const [rooms, setRooms] = useState([]); // 🔥 NEW
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -11,45 +12,40 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 PAGE PROTECT + REDIRECT FIX
+  // 🔐 PROTECT
   useEffect(() => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      localStorage.setItem("redirect", "/tenants"); // 🔥 SAVE PAGE
-      window.location.href = "/login"; // 🔥 STRONG REDIRECT
-    } else {
-      loadData(token);
-    }
-  }, []);
-
-  // ✅ LOAD DATA
-  const loadData = async (token) => {
-    try {
-      const res = await fetch("/api/tenants", {
-        headers: {
-          Authorization: token,
-        },
-      });
-
-      const data = await res.json();
-      setTenants(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  // ✅ ADD TENANT (FINAL FIX)
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
     const token = localStorage.getItem("token");
 
     if (!token) {
       localStorage.setItem("redirect", "/tenants");
       window.location.href = "/login";
-      return;
+    } else {
+      loadData(token);
+      loadRooms(); // 🔥 LOAD ROOMS
     }
+  }, []);
+
+  // ✅ LOAD TENANTS
+  const loadData = async (token) => {
+    const res = await fetch("/api/tenants", {
+      headers: { Authorization: token },
+    });
+    const data = await res.json();
+    setTenants(Array.isArray(data) ? data : []);
+  };
+
+  // ✅ LOAD VACANT ROOMS
+  const loadRooms = async () => {
+    const res = await fetch("/api/rooms/available");
+    const data = await res.json();
+    setRooms(Array.isArray(data) ? data : []);
+  };
+
+  // ✅ ADD TENANT
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const token = localStorage.getItem("token");
 
     if (!form.name || !form.roomNumber) {
       alert("Fill required fields ❌");
@@ -79,6 +75,7 @@ export default function Page() {
       });
 
       loadData(token);
+      loadRooms(); // 🔥 refresh rooms
     } else {
       alert(data.message || "Error ❌");
     }
@@ -93,9 +90,7 @@ export default function Page() {
 
     const res = await fetch(`/api/tenants/${id}`, {
       method: "DELETE",
-      headers: {
-        Authorization: token,
-      },
+      headers: { Authorization: token },
     });
 
     const data = await res.json();
@@ -103,16 +98,18 @@ export default function Page() {
     if (data.success) {
       alert("Deleted ✅");
       loadData(token);
+      loadRooms(); // 🔥 refresh rooms
     }
   };
 
-  // ✅ EDIT
+  // ✅ EDIT (ROOM TRANSFER SUPPORT)
   const editTenant = async (t) => {
     const token = localStorage.getItem("token");
 
     const name = prompt("Name", t.name);
     const phone = prompt("Phone", t.phone);
     const rent = prompt("Rent", t.rentAmount);
+    const room = prompt("Room Number", t.roomNumber); // 🔥 NEW
 
     const res = await fetch(`/api/tenants/${t._id}`, {
       method: "PUT",
@@ -124,6 +121,7 @@ export default function Page() {
         name,
         phone,
         rentAmount: Number(rent),
+        roomNumber: room,
       }),
     });
 
@@ -132,6 +130,9 @@ export default function Page() {
     if (data.success) {
       alert("Updated ✅");
       loadData(token);
+      loadRooms(); // 🔥 refresh rooms
+    } else {
+      alert(data.message || "Error ❌");
     }
   };
 
@@ -164,14 +165,22 @@ export default function Page() {
           }
         />
 
-        <input
-          placeholder="Room"
+        {/* 🔥 ROOM DROPDOWN */}
+        <select
           className="border p-2"
           value={form.roomNumber}
           onChange={(e) =>
             setForm({ ...form, roomNumber: e.target.value })
           }
-        />
+        >
+          <option value="">Select Room</option>
+
+          {rooms.map((r) => (
+            <option key={r._id} value={r.roomNumber}>
+              {r.roomNumber}
+            </option>
+          ))}
+        </select>
 
         <input
           type="number"
