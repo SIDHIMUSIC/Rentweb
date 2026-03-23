@@ -2,7 +2,7 @@ import { connectDB } from "../../../lib/mongodb";
 import Tenant from "../../../models/Tenant";
 import Room from "../../../models/Room";
 import Payment from "../../../models/Payment";
-import jwt from "jsonwebtoken"; // 🔐 ADD
+import jwt from "jsonwebtoken";
 
 // ===============================
 // GET (optional open)
@@ -10,9 +10,7 @@ import jwt from "jsonwebtoken"; // 🔐 ADD
 export async function GET() {
   try {
     await connectDB();
-
     const tenants = await Tenant.find();
-
     return Response.json(tenants || []);
   } catch (err) {
     console.log("GET ERROR:", err);
@@ -38,7 +36,7 @@ export async function POST(req) {
     }
 
     try {
-      jwt.verify(token, "MY_SECRET_KEY");
+      jwt.verify(token, process.env.JWT_SECRET); // ✅ FIXED
     } catch {
       return Response.json({
         success: false,
