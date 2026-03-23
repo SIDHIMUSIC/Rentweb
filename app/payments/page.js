@@ -13,11 +13,27 @@ export default function Page() {
     paidAmount: 0,
   });
 
+  // 🔐 TOKEN
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("token")
+      : "";
+
   // LOAD DATA
   const loadData = async () => {
     try {
-      const t = await fetch("/api/tenants").then((r) => r.json());
-      const p = await fetch("/api/payments").then((r) => r.json());
+      const t = await fetch("/api/tenants", {
+        headers: {
+          Authorization: token,
+        },
+      }).then((r) => r.json());
+
+      const p = await fetch("/api/payments", {
+        headers: {
+          Authorization: token,
+        },
+      }).then((r) => r.json());
+
       setTenants(Array.isArray(t) ? t : []);
       setPayments(Array.isArray(p) ? p : []);
     } catch (err) {
@@ -42,6 +58,7 @@ export default function Page() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: token, // 🔐
       },
       body: JSON.stringify(form),
     });
@@ -79,7 +96,6 @@ export default function Page() {
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-
       <h1 className="text-2xl font-bold mb-4 text-blue-600">
         💳 Payments
       </h1>
@@ -148,7 +164,6 @@ export default function Page() {
 
           <div className="grid gap-3">
             {sorted.map((p) => {
-
               const now = new Date();
 
               const parseMonth = (str) => {
@@ -163,7 +178,6 @@ export default function Page() {
               if (p.status === "paid") bg = "bg-green-500";
               else if (p.status === "partial") bg = "bg-yellow-500";
 
-              // 🔥 OVERDUE
               if (
                 p.remainingAmount > 0 &&
                 paymentDate < now &&
@@ -189,20 +203,12 @@ export default function Page() {
                       <p>Remaining: ₹{p.remainingAmount}</p>
                       <p>Status: {p.status}</p>
 
-                      {/* DETAILS */}
                       {openId === p._id && (
                         <div className="mt-3 bg-white text-black p-3 rounded">
                           <p><b>Total Rent:</b> ₹{p.totalRent}</p>
                           <p><b>Paid:</b> ₹{p.paidAmount}</p>
                           <p><b>Remaining:</b> ₹{p.remainingAmount}</p>
                           <p><b>Status:</b> {p.status}</p>
-
-                          {p.createdAt && (
-                            <p>
-                              <b>Date:</b>{" "}
-                              {new Date(p.createdAt).toLocaleDateString()}
-                            </p>
-                          )}
                         </div>
                       )}
                     </div>
@@ -212,7 +218,6 @@ export default function Page() {
                       className="flex flex-col gap-2"
                       onClick={(e) => e.stopPropagation()}
                     >
-
                       {/* ✔ */}
                       {p.status !== "paid" && (
                         <button
@@ -221,6 +226,7 @@ export default function Page() {
                               method: "POST",
                               headers: {
                                 "Content-Type": "application/json",
+                                Authorization: token,
                               },
                               body: JSON.stringify({ id: p._id }),
                             });
@@ -242,6 +248,7 @@ export default function Page() {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
+                              Authorization: token,
                             },
                             body: JSON.stringify({
                               tenant: p.tenant._id,
@@ -267,6 +274,7 @@ export default function Page() {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
+                              Authorization: token,
                             },
                             body: JSON.stringify({ id: p._id }),
                           });
@@ -277,8 +285,8 @@ export default function Page() {
                       >
                         ✖
                       </button>
-
                     </div>
+
                   </div>
                 </div>
               );
