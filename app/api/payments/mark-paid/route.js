@@ -16,7 +16,7 @@ export async function POST(req) {
   }
 
   try {
-    jwt.verify(token, "MY_SECRET_KEY");
+    jwt.verify(token, process.env.JWT_SECRET); // ✅ FIXED
   } catch {
     return Response.json({
       success: false,
