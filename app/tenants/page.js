@@ -14,7 +14,7 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 PROTECT PAGE
+  // 🔐 PAGE PROTECT
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -37,10 +37,11 @@ export default function Page() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const token = localStorage.getItem("token"); // 🔥 FIX
+    const token = localStorage.getItem("token"); // 🔥 IMPORTANT
 
     if (!token) {
-      alert("Login again ❌");
+      alert("Login required ❌");
+      router.push("/login");
       return;
     }
 
@@ -57,6 +58,7 @@ export default function Page() {
 
     if (data.success) {
       alert("Added ✅");
+
       setForm({
         name: "",
         phone: "",
@@ -64,6 +66,7 @@ export default function Page() {
         rentAmount: 3000,
         startDate: "",
       });
+
       loadData();
     } else {
       alert(data.message || "Error ❌");
@@ -129,29 +132,48 @@ export default function Page() {
         onSubmit={handleSubmit}
         className="flex flex-wrap gap-3 mb-6 bg-white p-4 rounded shadow"
       >
-        <input placeholder="Name" className="border p-2"
+        <input
+          placeholder="Name"
+          className="border p-2"
           value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-
-        <input placeholder="Phone" className="border p-2"
-          value={form.phone}
-          onChange={(e) => setForm({ ...form, phone: e.target.value })}
-        />
-
-        <input placeholder="Room" className="border p-2"
-          value={form.roomNumber}
-          onChange={(e) => setForm({ ...form, roomNumber: e.target.value })}
-        />
-
-        <input type="number" className="border p-2"
-          value={form.rentAmount}
           onChange={(e) =>
-            setForm({ ...form, rentAmount: Number(e.target.value) })
+            setForm({ ...form, name: e.target.value })
           }
         />
 
-        <input type="date" className="border p-2"
+        <input
+          placeholder="Phone"
+          className="border p-2"
+          value={form.phone}
+          onChange={(e) =>
+            setForm({ ...form, phone: e.target.value })
+          }
+        />
+
+        <input
+          placeholder="Room"
+          className="border p-2"
+          value={form.roomNumber}
+          onChange={(e) =>
+            setForm({ ...form, roomNumber: e.target.value })
+          }
+        />
+
+        <input
+          type="number"
+          className="border p-2"
+          value={form.rentAmount}
+          onChange={(e) =>
+            setForm({
+              ...form,
+              rentAmount: Number(e.target.value),
+            })
+          }
+        />
+
+        <input
+          type="date"
+          className="border p-2"
           value={form.startDate}
           onChange={(e) =>
             setForm({ ...form, startDate: e.target.value })
@@ -172,13 +194,17 @@ export default function Page() {
             <p>₹{t.rentAmount}</p>
 
             <div className="flex gap-2 mt-2">
-              <button onClick={() => editTenant(t)}
-                className="bg-yellow-500 text-white px-2">
+              <button
+                onClick={() => editTenant(t)}
+                className="bg-yellow-500 text-white px-2"
+              >
                 Edit
               </button>
 
-              <button onClick={() => deleteTenant(t._id)}
-                className="bg-red-500 text-white px-2">
+              <button
+                onClick={() => deleteTenant(t._id)}
+                className="bg-red-500 text-white px-2"
+              >
                 Delete
               </button>
             </div>
