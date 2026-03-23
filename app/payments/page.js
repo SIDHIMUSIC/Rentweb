@@ -5,7 +5,7 @@ export default function Page() {
   const [tenants, setTenants] = useState([]);
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
-  const [openId, setOpenId] = useState(null); // 🔥 accordion
+  const [openId, setOpenId] = useState(null);
 
   const [form, setForm] = useState({
     tenant: "",
@@ -13,14 +13,11 @@ export default function Page() {
     paidAmount: 0,
   });
 
-  // ===============================
   // LOAD DATA
-  // ===============================
   const loadData = async () => {
     try {
       const t = await fetch("/api/tenants").then((r) => r.json());
       const p = await fetch("/api/payments").then((r) => r.json());
-
       setTenants(Array.isArray(t) ? t : []);
       setPayments(Array.isArray(p) ? p : []);
     } catch (err) {
@@ -32,9 +29,7 @@ export default function Page() {
     loadData();
   }, []);
 
-  // ===============================
-  // SAVE PAYMENT
-  // ===============================
+  // SAVE
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -61,16 +56,12 @@ export default function Page() {
     }
   };
 
-  // ===============================
   // FILTER
-  // ===============================
   const filtered = payments.filter(
     (p) => String(p.tenant?._id) === String(selectedTenant)
   );
 
-  // ===============================
   // SORT
-  // ===============================
   const sorted = [...filtered].sort((a, b) => {
     const parseMonth = (str) => {
       if (!str) return new Date(0);
@@ -80,9 +71,7 @@ export default function Page() {
     return parseMonth(a.month) - parseMonth(b.month);
   });
 
-  // ===============================
   // TOTAL
-  // ===============================
   const totalPending = sorted.reduce(
     (a, x) => a + (x.remainingAmount || 0),
     0
@@ -95,7 +84,7 @@ export default function Page() {
         💳 Payments
       </h1>
 
-      {/* ================= FORM ================= */}
+      {/* FORM */}
       <form
         onSubmit={handleSubmit}
         className="flex gap-3 flex-wrap mb-6 bg-white p-4 rounded shadow"
@@ -158,122 +147,142 @@ export default function Page() {
           </div>
 
           <div className="grid gap-3">
-            {sorted.map((p) => (
-              <div
-                key={p._id}
-                onClick={() =>
-                  setOpenId(openId === p._id ? null : p._id)
-                }
-                className={`p-4 rounded text-white shadow cursor-pointer ${
-                  p.status === "paid"
-                    ? "bg-green-500"
-                    : p.status === "partial"
-                    ? "bg-yellow-500"
-                    : "bg-red-500"
-                }`}
-              >
-                <div className="flex justify-between items-center">
+            {sorted.map((p) => {
 
-                  {/* LEFT */}
-                  <div>
-                    <p className="font-bold text-lg">{p.month}</p>
-                    <p>Paid: ₹{p.paidAmount}</p>
-                    <p>Remaining: ₹{p.remainingAmount}</p>
-                    <p>Status: {p.status}</p>
+              const now = new Date();
 
-                    {/* 🔽 DETAILS */}
-                    {openId === p._id && (
-                      <div className="mt-3 bg-white text-black p-3 rounded">
-                        <p><b>Total Rent:</b> ₹{p.totalRent}</p>
-                        <p><b>Paid:</b> ₹{p.paidAmount}</p>
-                        <p><b>Remaining:</b> ₹{p.remainingAmount}</p>
-                        <p><b>Status:</b> {p.status}</p>
+              const parseMonth = (str) => {
+                const [month, year] = str.split(" ");
+                return new Date(`${month} 1, ${year}`);
+              };
 
-                        {p.createdAt && (
-                          <p>
-                            <b>Created:</b>{" "}
-                            {new Date(p.createdAt).toLocaleDateString()}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
+              const paymentDate = parseMonth(p.month);
 
-                  {/* RIGHT BUTTONS */}
-                  <div
-                    className="flex flex-col gap-2"
-                    onClick={(e) => e.stopPropagation()} // 🔥 prevent toggle
-                  >
+              let bg = "bg-red-500";
 
-                    {/* ✔ */}
-                    {p.status !== "paid" && (
+              if (p.status === "paid") bg = "bg-green-500";
+              else if (p.status === "partial") bg = "bg-yellow-500";
+
+              // 🔥 OVERDUE
+              if (
+                p.remainingAmount > 0 &&
+                paymentDate < now &&
+                p.status !== "paid"
+              ) {
+                bg = "bg-red-700 animate-pulse";
+              }
+
+              return (
+                <div
+                  key={p._id}
+                  onClick={() =>
+                    setOpenId(openId === p._id ? null : p._id)
+                  }
+                  className={`p-4 rounded text-white shadow cursor-pointer ${bg}`}
+                >
+                  <div className="flex justify-between items-center">
+
+                    {/* LEFT */}
+                    <div>
+                      <p className="font-bold text-lg">{p.month}</p>
+                      <p>Paid: ₹{p.paidAmount}</p>
+                      <p>Remaining: ₹{p.remainingAmount}</p>
+                      <p>Status: {p.status}</p>
+
+                      {/* DETAILS */}
+                      {openId === p._id && (
+                        <div className="mt-3 bg-white text-black p-3 rounded">
+                          <p><b>Total Rent:</b> ₹{p.totalRent}</p>
+                          <p><b>Paid:</b> ₹{p.paidAmount}</p>
+                          <p><b>Remaining:</b> ₹{p.remainingAmount}</p>
+                          <p><b>Status:</b> {p.status}</p>
+
+                          {p.createdAt && (
+                            <p>
+                              <b>Date:</b>{" "}
+                              {new Date(p.createdAt).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* BUTTONS */}
+                    <div
+                      className="flex flex-col gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+
+                      {/* ✔ */}
+                      {p.status !== "paid" && (
+                        <button
+                          onClick={async () => {
+                            await fetch("/api/payments/mark-paid", {
+                              method: "POST",
+                              headers: {
+                                "Content-Type": "application/json",
+                              },
+                              body: JSON.stringify({ id: p._id }),
+                            });
+                            loadData();
+                          }}
+                          className="bg-white text-green-600 px-2 py-1 rounded"
+                        >
+                          ✔
+                        </button>
+                      )}
+
+                      {/* ✏️ */}
                       <button
                         onClick={async () => {
-                          await fetch("/api/payments/mark-paid", {
+                          const newAmount = prompt("Enter amount");
+                          if (!newAmount || Number(newAmount) <= 0) return;
+
+                          await fetch("/api/payments", {
+                            method: "POST",
+                            headers: {
+                              "Content-Type": "application/json",
+                            },
+                            body: JSON.stringify({
+                              tenant: p.tenant._id,
+                              month: p.month,
+                              paidAmount: Number(newAmount),
+                            }),
+                          });
+
+                          loadData();
+                        }}
+                        className="bg-yellow-400 text-black px-2 py-1 rounded"
+                      >
+                        ✏️
+                      </button>
+
+                      {/* ❌ */}
+                      <button
+                        onClick={async () => {
+                          const ok = confirm("Delete?");
+                          if (!ok) return;
+
+                          await fetch("/api/payments/delete", {
                             method: "POST",
                             headers: {
                               "Content-Type": "application/json",
                             },
                             body: JSON.stringify({ id: p._id }),
                           });
+
                           loadData();
                         }}
-                        className="bg-white text-green-600 px-2 py-1 rounded"
+                        className="bg-black text-white px-2 py-1 rounded"
                       >
-                        ✔
+                        ✖
                       </button>
-                    )}
 
-                    {/* ✏️ EDIT */}
-                    <button
-                      onClick={async () => {
-                        const newAmount = prompt("Enter amount");
-                        if (!newAmount || Number(newAmount) <= 0) return;
-
-                        await fetch("/api/payments", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({
-                            tenant: p.tenant._id,
-                            month: p.month,
-                            paidAmount: Number(newAmount),
-                          }),
-                        });
-
-                        loadData();
-                      }}
-                      className="bg-yellow-400 text-black px-2 py-1 rounded"
-                    >
-                      ✏️
-                    </button>
-
-                    {/* ❌ DELETE */}
-                    <button
-                      onClick={async () => {
-                        const ok = confirm("Delete?");
-                        if (!ok) return;
-
-                        await fetch("/api/payments/delete", {
-                          method: "POST",
-                          headers: {
-                            "Content-Type": "application/json",
-                          },
-                          body: JSON.stringify({ id: p._id }),
-                        });
-
-                        loadData();
-                      }}
-                      className="bg-black text-white px-2 py-1 rounded"
-                    >
-                      ✖
-                    </button>
-
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}
