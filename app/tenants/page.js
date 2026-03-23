@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 
 export default function Page() {
   const [tenants, setTenants] = useState([]);
-  const [rooms, setRooms] = useState([]); // 🔥 NEW
+  const [rooms, setRooms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -12,7 +14,7 @@ export default function Page() {
     startDate: "",
   });
 
-  // 🔐 PROTECT
+  // 🔐 AUTH + LOAD
   useEffect(() => {
     const token = localStorage.getItem("token");
 
@@ -20,28 +22,41 @@ export default function Page() {
       localStorage.setItem("redirect", "/tenants");
       window.location.href = "/login";
     } else {
-      loadData(token);
-      loadRooms(); // 🔥 LOAD ROOMS
+      init(token);
     }
   }, []);
 
+  const init = async (token) => {
+    await loadData(token);
+    await loadRooms();
+    setLoading(false);
+  };
+
   // ✅ LOAD TENANTS
   const loadData = async (token) => {
-    const res = await fetch("/api/tenants", {
-      headers: { Authorization: token },
-    });
-    const data = await res.json();
-    setTenants(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch("/api/tenants", {
+        headers: { Authorization: token },
+      });
+      const data = await res.json();
+      setTenants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log("TENANT LOAD ERROR:", err);
+    }
   };
 
-  // ✅ LOAD VACANT ROOMS
+  // ✅ LOAD ROOMS
   const loadRooms = async () => {
-    const res = await fetch("/api/rooms/available");
-    const data = await res.json();
-    setRooms(Array.isArray(data) ? data : []);
+    try {
+      const res = await fetch("/api/rooms/available");
+      const data = await res.json();
+      setRooms(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log("ROOM LOAD ERROR:", err);
+    }
   };
 
-  // ✅ ADD TENANT
+  // ✅ ADD
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -52,32 +67,36 @@ export default function Page() {
       return;
     }
 
-    const res = await fetch("/api/tenants", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify(form),
-    });
-
-    const data = await res.json();
-
-    if (data.success) {
-      alert("Added ✅");
-
-      setForm({
-        name: "",
-        phone: "",
-        roomNumber: "",
-        rentAmount: 3000,
-        startDate: "",
+    try {
+      const res = await fetch("/api/tenants", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify(form),
       });
 
-      loadData(token);
-      loadRooms(); // 🔥 refresh rooms
-    } else {
-      alert(data.message || "Error ❌");
+      const data = await res.json();
+
+      if (data.success) {
+        alert("Added ✅");
+
+        setForm({
+          name: "",
+          phone: "",
+          roomNumber: "",
+          rentAmount: 3000,
+          startDate: "",
+        });
+
+        await loadData(token);
+        await loadRooms();
+      } else {
+        alert(data.message || "Error ❌");
+      }
+    } catch (err) {
+      console.log("ADD ERROR:", err);
     }
   };
 
@@ -88,53 +107,73 @@ export default function Page() {
     const ok = confirm("Delete?");
     if (!ok) return;
 
-    const res = await fetch(`/api/tenants/${id}`, {
-      method: "DELETE",
-      headers: { Authorization: token },
-    });
+    try {
+      const res = await fetch(`/api/tenants/${id}`, {
+        method: "DELETE",
+        headers: { Authorization: token },
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    if (data.success) {
-      alert("Deleted ✅");
-      loadData(token);
-      loadRooms(); // 🔥 refresh rooms
+      if (data.success) {
+        alert("Deleted ✅");
+        await loadData(token);
+        await loadRooms();
+      }
+    } catch (err) {
+      console.log("DELETE ERROR:", err);
     }
   };
 
-  // ✅ EDIT (ROOM TRANSFER SUPPORT)
+  // ✅ EDIT (FINAL FIX)
   const editTenant = async (t) => {
     const token = localStorage.getItem("token");
 
     const name = prompt("Name", t.name);
     const phone = prompt("Phone", t.phone);
     const rent = prompt("Rent", t.rentAmount);
-    const room = prompt("Room Number", t.roomNumber); // 🔥 NEW
+    const room = prompt("Room Number", t.roomNumber);
 
-    const res = await fetch(`/api/tenants/${t._id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: token,
-      },
-      body: JSON.stringify({
-        name,
-        phone,
-        rentAmount: Number(rent),
-        roomNumber: room,
-      }),
-    });
+    if (!name || !room) {
+      alert("Required ❌");
+      return;
+    }
 
-    const data = await res.json();
+    try {
+      const res = await fetch(`/api/tenants/${t._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: token,
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          rentAmount: Number(rent),
+          roomNumber: room,
+        }),
+      });
 
-    if (data.success) {
-      alert("Updated ✅");
-      loadData(token);
-      loadRooms(); // 🔥 refresh rooms
-    } else {
-      alert(data.message || "Error ❌");
+      const data = await res.json();
+
+      console.log("EDIT RESPONSE:", data);
+
+      if (data.success) {
+        alert("Updated ✅");
+        await loadData(token);
+        await loadRooms();
+      } else {
+        alert(data.message || "Error ❌");
+      }
+    } catch (err) {
+      console.log("EDIT ERROR:", err);
     }
   };
+
+  // 🔥 LOADING STATE
+  if (loading) {
+    return <div className="p-6">Loading...</div>;
+  }
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
@@ -174,7 +213,6 @@ export default function Page() {
           }
         >
           <option value="">Select Room</option>
-
           {rooms.map((r) => (
             <option key={r._id} value={r.roomNumber}>
               {r.roomNumber}
