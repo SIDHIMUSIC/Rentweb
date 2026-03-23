@@ -1,9 +1,12 @@
 "use client";
-
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
+  const router = useRouter();
+
   const [tenants, setTenants] = useState([]);
+  const [token, setToken] = useState(""); // 🔥 FIX
 
   const [form, setForm] = useState({
     name: "",
@@ -13,25 +16,53 @@ export default function Page() {
     startDate: "",
   });
 
+  // 🔐 TOKEN CHECK + PROTECT
+  useEffect(() => {
+    const t = localStorage.getItem("token");
+
+    if (!t) {
+      router.push("/login"); // 🔥 redirect
+    } else {
+      setToken(t);
+    }
+  }, []);
+
   // LOAD DATA
-  const loadData = async () => {
-    const res = await fetch("/api/tenants");
-    const data = await res.json();
-    setTenants(Array.isArray(data) ? data : []);
+  const loadData = async (tkn) => {
+    try {
+      const res = await fetch("/api/tenants", {
+        headers: {
+          Authorization: tkn,
+        },
+      });
+      const data = await res.json();
+      setTenants(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log(err);
+    }
   };
 
+  // 🔥 LOAD AFTER TOKEN
   useEffect(() => {
-    loadData();
-  }, []);
+    if (token) {
+      loadData(token);
+    }
+  }, [token]);
 
   // ADD TENANT
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!form.name || !form.roomNumber) {
+      alert("Fill all fields ❌");
+      return;
+    }
+
     const res = await fetch("/api/tenants", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: token, // 🔥 FIX
       },
       body: JSON.stringify(form),
     });
@@ -40,6 +71,7 @@ export default function Page() {
 
     if (data.success) {
       alert("Added ✅");
+
       setForm({
         name: "",
         phone: "",
@@ -47,25 +79,34 @@ export default function Page() {
         rentAmount: 3000,
         startDate: "",
       });
-      loadData();
+
+      loadData(token);
+    } else {
+      alert(data.message || "Error ❌");
     }
   };
 
   // DELETE
   const deleteTenant = async (id) => {
+    const ok = confirm("Delete?");
+    if (!ok) return;
+
     const res = await fetch(`/api/tenants/${id}`, {
       method: "DELETE",
+      headers: {
+        Authorization: token, // 🔥 FIX
+      },
     });
 
     const data = await res.json();
 
     if (data.success) {
       alert("Deleted ✅");
-      loadData();
+      loadData(token);
     }
   };
 
-  // EDIT (🔥 FULL FIX)
+  // EDIT
   const editTenant = async (t) => {
     const name = prompt("Name", t.name);
     const phone = prompt("Phone", t.phone);
@@ -75,6 +116,7 @@ export default function Page() {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        Authorization: token, // 🔥 FIX
       },
       body: JSON.stringify({
         name,
@@ -87,13 +129,12 @@ export default function Page() {
 
     if (data.success) {
       alert("Updated ✅");
-      loadData();
+      loadData(token);
     }
   };
 
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
-
       <h1 className="text-2xl font-bold mb-6 text-blue-600">
         👥 Tenants
       </h1>
@@ -130,7 +171,6 @@ export default function Page() {
           }
         />
 
-        {/* 🔥 RENT INPUT */}
         <input
           type="number"
           placeholder="Rent"
@@ -144,7 +184,6 @@ export default function Page() {
           }
         />
 
-        {/* START DATE */}
         <input
           type="date"
           className="border p-2"
@@ -154,7 +193,7 @@ export default function Page() {
           }
         />
 
-        <button className="bg-blue-500 text-white px-4">
+        <button className="bg-blue-500 text-white px-4 py-2 rounded">
           Add
         </button>
       </form>
@@ -168,9 +207,7 @@ export default function Page() {
           >
             <p className="font-bold">{t.name}</p>
             <p>{t.roomNumber}</p>
-            <p className="text-blue-500">
-              ₹{t.rentAmount}
-            </p>
+            <p className="text-blue-500">₹{t.rentAmount}</p>
 
             {t.startDate && (
               <p className="text-xs text-gray-500">
@@ -196,7 +233,6 @@ export default function Page() {
           </div>
         ))}
       </div>
-
     </div>
   );
 }
