@@ -6,6 +6,9 @@ export default function Page() {
   const [payments, setPayments] = useState([]);
   const [selectedTenant, setSelectedTenant] = useState("");
   const [token, setToken] = useState("");
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [paymentMode, setPaymentMode] = useState("");
 
   const [form, setForm] = useState({
     tenant: "",
@@ -41,6 +44,97 @@ export default function Page() {
   useEffect(() => {
     if (token) loadData(token);
   }, [token]);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
+  const handleOnlinePayment = async (payment, amount) => {
+    setSelectedPayment(payment);
+    setShowPaymentModal(true);
+  };
+
+  const processPayment = async (mode) => {
+    setPaymentMode(mode);
+    setShowPaymentModal(false);
+
+    const amount = prompt("Enter amount to pay");
+    if (!amount || amount <= 0) return;
+
+    const orderRes = await fetch("/api/payments/create-order", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: token,
+      },
+      body: JSON.stringify({
+        amount: Number(amount),
+        paymentId: selectedPayment._id,
+        tenantName: selectedPayment.tenant.name,
+        roomNumber: selectedPayment.tenant.roomNumber,
+      }),
+    });
+
+    const orderData = await orderRes.json();
+
+    if (!orderData.success) {
+      alert("Failed to create order");
+      return;
+    }
+
+    const options = {
+      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+      amount: orderData.amount,
+      currency: orderData.currency,
+      name: "HARRY RENT HOUSE",
+      description: `Payment for ${selectedPayment.tenant.roomNumber}`,
+      order_id: orderData.orderId,
+      handler: async function (response) {
+        const verifyRes = await fetch("/api/payments/verify", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: token,
+          },
+          body: JSON.stringify({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+            paymentId: selectedPayment._id,
+            amount: Number(amount),
+            paymentMode: mode,
+          }),
+        });
+
+        const verifyData = await verifyRes.json();
+
+        if (verifyData.success) {
+          alert(`Payment Successful! Transaction ID: ${verifyData.transactionId}`);
+          loadData(token);
+        } else {
+          alert("Payment verification failed");
+        }
+      },
+      prefill: {
+        name: selectedPayment.tenant.name,
+        contact: selectedPayment.tenant.phone || "",
+      },
+      theme: {
+        color: "#3b82f6",
+      },
+      method: {
+        upi: mode === "UPI",
+        card: mode === "Card",
+        netbanking: mode === "NetBanking",
+      },
+    };
+
+    const rzp = new window.Razorpay(options);
+    rzp.open();
+  };
 
   // SAVE PAYMENT
   const handleSubmit = async (e) => {
@@ -91,8 +185,51 @@ export default function Page() {
   return (
     <div className="p-6 bg-gray-100 min-h-screen">
       <h1 className="text-2xl font-bold mb-4 text-blue-600">
-        💳 Payments
+        Payments
       </h1>
+
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+              Select Payment Method
+            </h2>
+
+            <div className="space-y-4">
+              <button
+                onClick={() => processPayment("UPI")}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
+              >
+                <span className="text-2xl">📱</span>
+                <span>Pay via UPI</span>
+              </button>
+
+              <button
+                onClick={() => processPayment("Card")}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
+              >
+                <span className="text-2xl">💳</span>
+                <span>Pay via Debit/Credit Card</span>
+              </button>
+
+              <button
+                onClick={() => processPayment("NetBanking")}
+                className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 px-6 rounded-lg flex items-center justify-center gap-3 transition"
+              >
+                <span className="text-2xl">🏦</span>
+                <span>Pay via Net Banking</span>
+              </button>
+
+              <button
+                onClick={() => setShowPaymentModal(false)}
+                className="w-full bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* FORM */}
       <form
@@ -174,6 +311,16 @@ export default function Page() {
 
                   {/* RIGHT BUTTONS */}
                   <div className="flex gap-2">
+
+                    {/* PAY NOW */}
+                    {p.status !== "paid" && (
+                      <button
+                        onClick={() => handleOnlinePayment(p)}
+                        className="bg-green-600 text-white px-3 py-1 rounded font-bold"
+                      >
+                        Pay Now
+                      </button>
+                    )}
 
                     {/* ✔ */}
                     {p.status !== "paid" && (
