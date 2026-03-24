@@ -31,13 +31,6 @@ export default function Navbar() {
           Payments
         </a>
 
-        <a
-          href="/transactions"
-          className="text-gray-300 hover:text-cyan-400 transition duration-300 hover:drop-shadow-[0_0_8px_#06b6d4]"
-        >
-          Transactions
-        </a>
-
       </div>
     </div>
   );
